@@ -646,17 +646,41 @@ async function saveProduct() {
     }
 
     // 🔥 Upload image if new file selected
-    const file = document.getElementById('pimage').files[0];
-    if (file) {
-        try {
-            const storageRef = storage.ref(`product_images/${code}_${Date.now()}`);
-            await storageRef.put(file);
-            product.imageUrl = await storageRef.getDownloadURL();
-        } catch (err) {
-            console.error("❌ Image upload error:", err);
-            alert("⚠️ Image upload failed, saving product without image.");
-        }
+const file = document.getElementById('pimage').files[0];
+
+if (file) {
+    try {
+        const filePath = `product_images/${code}_${Date.now()}`;
+        const storageRef = storage.ref().child(filePath);
+
+        // 🔥 ADD METADATA (VERY IMPORTANT)
+        const metadata = {
+            contentType: file.type || 'image/jpeg'
+        };
+
+        // 🔥 USE uploadTask (ensures proper completion)
+        const uploadTask = storageRef.put(file, metadata);
+
+        await new Promise((resolve, reject) => {
+            uploadTask.on(
+                'state_changed',
+                null,
+                (error) => reject(error),
+                async () => {
+                    const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                    product.imageUrl = downloadURL;
+                    resolve();
+                }
+            );
+        });
+
+        console.log("✅ Image uploaded:", product.imageUrl);
+
+    } catch (err) {
+        console.error("❌ Image upload error:", err);
+        alert("⚠️ Image upload failed, saving without image.");
     }
+}
 
     try {
         // ✅ CORRECT Firebase write path
