@@ -140,9 +140,10 @@
      
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <p style="font-size:13px; color:#666; text-align:center; margin-top:8px;">
-            Tip: Live camera works best on mobile (rear camera auto-selected). Must be on HTTPS.
+            Tip: Live camera works best on mobile.
         </p>
     </div>
+
     <!-- ADD PRODUCT -->
     <div class="card">
         <h3>📦 Add / Update Product</h3>
@@ -167,22 +168,27 @@
         
         <div id="verificationBox" style="display:none; background:#e8f5e9; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;"></div>
         
-        <button onclick="saveProduct()">Save Product</button>
+        <button onclick="saveProduct()">Save / Update Product</button>
     </div>
+
     <!-- INVENTORY OVERVIEW -->
     <div class="card">
         <h3>📊 Inventory Overview</h3>
         <div id="inventorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
     </div>
+
     <!-- MANAGE PRODUCTS -->
     <div class="card">
         <h3>🗂️ Manage Products & Stock</h3>
+        
         <button onclick="scanForEdit()" style="margin-bottom:12px; width:100%; padding:14px; background:#ff9800; font-size:17px;">
             📱 SCAN QR/BARCODE TO EDIT PRODUCT
         </button>
+        
         <input id="productSearch" placeholder="Search products..." onkeyup="filterProductList()" style="margin-bottom:15px;">
         <div id="productList" style="max-height: 420px; overflow-y: auto;"></div>
     </div>
+
     <!-- BILLING -->
     <div class="card">
         <h3>🛒 Billing</h3>
@@ -206,6 +212,7 @@
         </button>
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
     </div>
+
     <!-- INVOICE -->
     <div class="card">
         <h3>📄 Sales Invoice</h3>
@@ -216,6 +223,7 @@
             <button onclick="sendWhatsApp()">📱 Send via WhatsApp</button>
         </div>
     </div>
+
     <!-- REPORTS -->
     <div class="card">
         <h3>📈 Reports</h3>
@@ -265,7 +273,7 @@ let cart = [];
 let chartInstance = null;
 let html5QrCode = null;
 let isFlashOn = false;
-let scanMode = 'addProduct';
+let scanMode = 'addProduct';   // 'addProduct' | 'addToBill' | 'editProduct'
 let editMode = null;
 
 let storeConfig = {
@@ -305,7 +313,7 @@ function saveConfig() {
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
     db.ref('storeConfig').set(storeConfig)
         .then(() => {
-            alert("✅ Configuration saved successfully! Logo updated in app & invoices");
+            alert("✅ Configuration saved successfully!");
             closeConfigModal();
         })
         .catch(err => alert("Error saving config: " + err.message));
@@ -325,27 +333,36 @@ function loadData() {
     updateReports();
 }
 
-// ================== COMMON SCANNED CODE HANDLER ==================
+// ================== SCANNED CODE HANDLER ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
 
-    if (scanMode === 'addToBill') {
-        const p = products.find(pr => pr.code === code);
-        if (p) {
-            addToCart(p);
+    if (scanMode === 'editProduct') {
+        const product = products.find(p => p.code === code);
+        if (product) {
+            editProduct(code);
             statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Added to invoice: ${p.name}`;
+            statusEl.textContent = `✅ Product found: ${product.name} - Ready to edit`;
         } else {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = `❌ Product ${code} not found.`;
+            statusEl.textContent = `❌ This product is not available. Code: ${code}`;
         }
         scanMode = 'addProduct';
-    } else if (scanMode === 'editProduct') {
-        const p = products.find(pr => pr.code === code);
-        if (p) editProduct(code);
+    } 
+    else if (scanMode === 'addToBill') {
+        const product = products.find(p => p.code === code);
+        if (product) {
+            addToCart(product);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Added to invoice: ${product.name}`;
+        } else {
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = `❌ Product not found: ${code}`;
+        }
         scanMode = 'addProduct';
-    } else {
+    } 
+    else {
         document.getElementById('pcode').value = code;
         document.getElementById('pcode').scrollIntoView({ behavior: "smooth" });
         document.getElementById('pcode').focus();
@@ -367,9 +384,7 @@ async function initScanner() {
     try {
         const cameras = await Html5Qrcode.getCameras();
         let selectedCamera = cameras.find(cam => 
-            cam.label.toLowerCase().includes("back") || 
-            cam.label.toLowerCase().includes("rear") ||
-            cam.facingMode === "environment"
+            cam.label.toLowerCase().includes("back") || cam.label.toLowerCase().includes("rear")
         ) || cameras[cameras.length - 1];
 
         await html5QrCode.start(selectedCamera.id, config, (decodedText) => handleScannedCode(decodedText), () => {});
@@ -386,9 +401,7 @@ function handleCameraError(err, statusEl) {
     statusEl.style.color = "#d32f2f";
     document.getElementById('flashBtn').style.display = 'none';
     let msg = "⚠️ Camera could not start.";
-    if (err.name === "NotFoundError" || err.message.includes("No camera")) msg = "❌ No camera detected.";
-    else if (err.name === "NotAllowedError" || err.message.includes("permission")) msg = "❌ Camera permission denied.<br>Please allow and tap Retry.";
-    else if (err.name === "NotReadableError") msg = "❌ Camera is in use by another app.";
+    if (err.name === "NotAllowedError") msg = "❌ Camera permission denied. Allow access and retry.";
     statusEl.innerHTML = msg + `<br><br><button onclick="initScanner()" style="padding:8px 16px;background:#1976d2;color:white;border:none;border-radius:6px;">🔄 Retry Live Camera</button>`;
 }
 
@@ -425,11 +438,12 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         });
 });
 
+// Scan Buttons
 function scanForAddToBill() {
     scanMode = 'addToBill';
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Point camera at barcode → will be added to invoice";
+    statusEl.textContent = "📱 Scan barcode to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -437,13 +451,12 @@ function scanForEdit() {
     scanMode = 'editProduct';
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Point camera at barcode → will load for editing";
-    window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
+    statusEl.textContent = "📱 Point camera at barcode to edit product...";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    initScanner();   // Auto-start camera when button is clicked
 }
 
-// ================== REST OF THE CODE (SEARCH, CART, EDIT, SAVE, BILLING, etc.) ==================
-// (All functions are exactly the same as the previous working version)
-
+// ================== SEARCH & CART ==================
 function searchProduct() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
@@ -486,6 +499,7 @@ function renderCart() {
     });
 }
 
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -517,7 +531,10 @@ function renderProductList(filtered = products) {
 
 function filterProductList() {
     const query = document.getElementById('productSearch').value.toLowerCase().trim();
-    const filtered = products.filter(p => (p.name || '').toLowerCase().includes(query) || (p.code || '').toString().includes(query));
+    const filtered = products.filter(p => 
+        (p.name || '').toLowerCase().includes(query) || 
+        (p.code || '').toString().includes(query)
+    );
     renderProductList(filtered);
 }
 
@@ -547,8 +564,12 @@ function editProduct(code) {
     document.getElementById('pcost').value = p.cost || '';
     document.getElementById('pqty').value = p.qty || '';
     document.getElementById('pminstock').value = p.minStock || 5;
+
     const preview = document.getElementById('imagePreview');
-    preview.innerHTML = p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` : '';
+    preview.innerHTML = p.imageUrl 
+        ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` 
+        : '';
+
     editMode = code;
     document.querySelector('.card h3').scrollIntoView({ behavior: "smooth" });
 }
@@ -734,7 +755,10 @@ function generateBill() {
 }
 
 function clearCart() {
-    if (confirm("Clear the cart?")) { cart = []; renderCart(); }
+    if (confirm("Clear the cart?")) {
+        cart = [];
+        renderCart();
+    }
 }
 
 function downloadPDF() {
