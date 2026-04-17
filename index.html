@@ -289,7 +289,7 @@ let storeConfig = {
     ivaRate: 19
 };
 
-// ================== CONFIG ==================
+// ================== CONFIG MODAL ==================
 function openConfigModal() {
     document.getElementById('configModal').style.display = 'flex';
     document.getElementById('logoUrl').value = storeConfig.logoUrl;
@@ -314,7 +314,7 @@ function saveConfig() {
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
     db.ref('storeConfig').set(storeConfig)
-        .then(() => alert("✅ Configuration saved!"))
+        .then(() => alert("✅ Configuration saved successfully!"))
         .catch(err => alert("Error: " + err.message));
     closeConfigModal();
 }
@@ -340,12 +340,12 @@ function handleScannedCode(decodedText) {
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
-            addToCart(product);   // This will prompt for quantity only
+            addToCart(product);
             statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Added to bill: ${product.name}`;
+            statusEl.textContent = `✅ Added to invoice: ${product.name}`;
         } else {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = `❌ Product with code ${code} not found in stock`;
+            statusEl.textContent = `❌ Product ${code} not found in stock`;
         }
         scanMode = 'addProduct';
     } else if (scanMode === 'editProduct') {
@@ -372,6 +372,8 @@ async function initScanner() {
 
     try {
         const cameras = await Html5Qrcode.getCameras();
+        if (cameras.length === 0) throw new Error("No camera found");
+
         let selectedCamera = cameras.find(cam => 
             cam.label.toLowerCase().includes("back") || 
             cam.label.toLowerCase().includes("rear") ||
@@ -406,7 +408,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported.");
+        alert("Flashlight not supported on this device.");
         isFlashOn = false;
     }
 }
@@ -491,7 +493,7 @@ function renderCart() {
     });
 }
 
-// ================== PRODUCT MANAGEMENT (unchanged) ==================
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
