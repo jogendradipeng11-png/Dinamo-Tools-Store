@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tool Store POS - Colombia</title>
-  
+ 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  
+ 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
     <style>
         :root { --primary: #1976d2; }
         body {
@@ -68,11 +67,9 @@
             padding: 10px 20px;
         }
         .flash-btn.on { background: #f44336; }
-
         .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         .table th { background: #f8f9fa; }
-
         #results button {
             background: #e3f2fd;
             color: var(--primary);
@@ -127,26 +124,24 @@
         ⚙️ Store Configuration
     </button>
 </header>
-
 <div class="container">
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner (Recommended)</h3>
-        <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px;"></div>
+        <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px;">Starting live camera...</p>
-      
+     
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
             <button id="flashBtn" class="flash-btn" onclick="toggleFlashlight()" style="display:none;">🔦 Flashlight OFF</button>
             <button onclick="initScanner()" style="padding:10px 20px; background:#4caf50;">🔄 Retry Live Camera</button>
         </div>
-      
+     
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <p style="font-size:13px; color:#666; text-align:center; margin-top:8px;">
-            Tip: Live camera works best. For photo, use clear, well-lit images.
+            Tip: Live camera works best on mobile (rear camera auto-selected). Must be on HTTPS.
         </p>
     </div>
-
     <!-- ADD PRODUCT -->
     <div class="card">
         <h3>📦 Add / Update Product</h3>
@@ -161,41 +156,37 @@
         </div>
         <button onclick="saveProduct()">Save Product</button>
     </div>
-
     <!-- INVENTORY OVERVIEW -->
     <div class="card">
         <h3>📊 Inventory Overview</h3>
         <div id="inventorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
     </div>
-
     <!-- MANAGE PRODUCTS -->
     <div class="card">
         <h3>🗂️ Manage Products & Stock</h3>
         <input id="productSearch" placeholder="Search products..." onkeyup="filterProductList()" style="margin-bottom:15px;">
         <div id="productList" style="max-height: 420px; overflow-y: auto;"></div>
     </div>
-
     <!-- BILLING -->
     <div class="card">
         <h3>🛒 Billing</h3>
         <input id="search" placeholder="Search product or scan barcode" onkeyup="searchProduct()">
         <div id="results"></div>
-       
+      
         <div style="display: flex; gap: 10px; margin:10px 0;">
             <input id="customerName" placeholder="Customer Name (Optional)" style="flex:1;">
             <input id="customerId" placeholder="Customer ID / NIT" style="flex:1;">
         </div>
-       
+      
         <table class="table" id="cartTable">
             <tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
         </table>
-      
+     
         <button onclick="generateBill()" class="success-btn" style="margin-top:15px; width:100%; padding:14px; font-size:17px;">
             Generate Sales Invoice
         </button>
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
     </div>
-
     <!-- INVOICE -->
     <div class="card">
         <h3>📄 Sales Invoice</h3>
@@ -206,7 +197,6 @@
             <button onclick="sendWhatsApp()">📱 Send via WhatsApp</button>
         </div>
     </div>
-
     <!-- REPORTS -->
     <div class="card">
         <h3>📈 Reports</h3>
@@ -214,7 +204,6 @@
         <div id="sales" style="margin:15px 0; font-size:19px; font-weight:bold; text-align:center;"></div>
     </div>
 </div>
-
 <!-- CONFIG MODAL -->
 <div id="configModal" class="modal">
     <div class="modal-content">
@@ -291,7 +280,6 @@ function saveConfig() {
     storeConfig.mobile = document.getElementById('mobile').value.trim();
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
-
     db.ref('storeConfig').set(storeConfig)
         .then(() => {
             alert("✅ Configuration saved successfully!");
@@ -314,60 +302,81 @@ function loadData() {
     updateReports();
 }
 
-// ================== LIVE CAMERA SCANNER ==================
-function initScanner() {
+// ================== FIXED LIVE CAMERA SCANNER (WORKS ON MOBILE) ==================
+async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#1976d2";
-    statusEl.textContent = "Starting live camera...";
+    statusEl.textContent = "Requesting camera permission...";
 
-    if (html5QrCode) html5QrCode.stop().catch(() => {});
+    // Stop previous instance if exists
+    if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+    }
 
     html5QrCode = new Html5Qrcode("reader");
 
     const config = { fps: 12, qrbox: { width: 260, height: 260 } };
 
-    html5QrCode.start(
-        { facingMode: { exact: "environment" } },
-        config,
-        (decodedText) => {
-            document.getElementById('search').value = decodedText.trim();
-            searchProduct();
-            statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Scanned: ${decodedText}`;
-        },
-        () => {}
-    ).then(() => {
+    try {
+        // NEW: Get list of cameras and auto-select BACK camera (fixes most mobile issues)
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (cameras.length === 0) {
+            throw new Error("No camera found on this device");
+        }
+
+        // Prefer back/rear camera (most important fix for mobile)
+        let selectedCamera = cameras.find(cam => 
+            cam.label.toLowerCase().includes("back") || 
+            cam.label.toLowerCase().includes("rear") ||
+            cam.facingMode === "environment"
+        );
+
+        // If no back camera found, use the last one (on mobile, last is usually back)
+        if (!selectedCamera) {
+            selectedCamera = cameras[cameras.length - 1];
+        }
+
+        const cameraId = selectedCamera.id;
+
+        await html5QrCode.start(
+            cameraId,
+            config,
+            (decodedText) => {
+                document.getElementById('search').value = decodedText.trim();
+                searchProduct();
+                statusEl.style.color = "#2e7d32";
+                statusEl.textContent = `✅ Scanned: ${decodedText}`;
+            },
+            () => {} // silent error callback (library calls this many times)
+        );
+
+        // Success
+        statusEl.style.color = "#2e7d32";
         statusEl.textContent = "📷 Live camera active — Point barcode/QR at the camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
-    }).catch((err) => {
-        tryFallback(statusEl, config);
-    });
-}
 
-function tryFallback(statusEl, config) {
-    html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-            document.getElementById('search').value = decodedText.trim();
-            searchProduct();
-            statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Scanned: ${decodedText}`;
-        },
-        () => {}
-    ).then(() => {
-        statusEl.textContent = "📷 Camera active (fallback)";
-        document.getElementById('flashBtn').style.display = 'inline-block';
-    }).catch((err) => handleCameraError(err, statusEl));
+    } catch (err) {
+        handleCameraError(err, statusEl);
+    }
 }
 
 function handleCameraError(err, statusEl) {
     statusEl.style.color = "#d32f2f";
     document.getElementById('flashBtn').style.display = 'none';
+
     let msg = "⚠️ Camera could not start.";
-    if (err.name === "NotFoundError") msg = "❌ No camera detected.";
-    else if (err.name === "NotAllowedError") msg = "❌ Camera permission denied. Allow access and refresh the page.";
-    else if (err.name === "NotReadableError") msg = "❌ Camera is in use by another app.";
+    
+    if (err.name === "NotFoundError" || err.message.includes("No camera")) {
+        msg = "❌ No camera detected on this device.";
+    } else if (err.name === "NotAllowedError" || err.message.includes("permission")) {
+        msg = "❌ Camera permission denied.<br>Please allow camera access and tap <strong>Retry Live Camera</strong>.";
+    } else if (err.name === "NotReadableError") {
+        msg = "❌ Camera is in use by another app.";
+    } else if (err.message.includes("insecure")) {
+        msg = "❌ Camera requires HTTPS.<br>Upload this file to a secure server (Firebase Hosting, Vercel, etc.).";
+    }
+
     statusEl.innerHTML = msg + `<br><br><button onclick="initScanner()" style="padding:8px 16px;background:#1976d2;color:white;border:none;border-radius:6px;">🔄 Retry Live Camera</button>`;
 }
 
@@ -386,11 +395,10 @@ async function toggleFlashlight() {
     }
 }
 
-// Photo Scan (Improved)
+// Photo Scan
 function startFileScan() {
     document.getElementById('fileInput').click();
 }
-
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
@@ -418,12 +426,13 @@ function searchProduct() {
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = '';
     if (!query) return;
+
     products.filter(p =>
         (p.name && p.name.toLowerCase().includes(query)) ||
         (p.code && p.code.toString().includes(query))
     ).forEach(p => {
         const btn = document.createElement('button');
-        btn.innerHTML = `${p.name} <small>(${p.code}) - $${parseFloat(p.price || 0).toLocaleString('en-US')}</small>`;
+        btn.innerHTML = `${p.name} <small>(${p.code}) - $${parseFloat(p.price || 0).toLocaleString('es-CO')}</small>`;
         btn.onclick = () => addToCart(p);
         resultsDiv.appendChild(btn);
     });
@@ -452,16 +461,14 @@ function renderCart() {
         row.innerHTML = `
             <td>${item.name}</td>
             <td>${item.qty}</td>
-            <td>$${parseFloat(item.price || 0).toLocaleString('en-US')}</td>
-            <td>$${(item.qty * item.price).toLocaleString('en-US')}</td>
+            <td>$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+            <td>$${(item.qty * item.price).toLocaleString('es-CO')}</td>
         `;
         table.appendChild(row);
     });
 }
 
-// ================== PRODUCT MANAGEMENT & OTHER FUNCTIONS ==================
-// (All other functions remain unchanged - renderProductList, filterProductList, restockProduct, deleteProduct, saveProduct, updateInventorySummary, updateReports, generateBill, clearCart, downloadPDF, printBill, sendWhatsApp)
-
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -544,7 +551,7 @@ function updateInventorySummary() {
             <strong>Low Stock Items</strong><br><span style="font-size:28px;color:#f57c00;">${lowStock}</span>
         </div>
         <div style="background:#e3f2fd;padding:15px;border-radius:10px;text-align:center;">
-            <strong>Stock Value (COP)</strong><br><span style="font-size:28px;color:#1976d2;">$${stockValue.toLocaleString('en-US')}</span>
+            <strong>Stock Value (COP)</strong><br><span style="font-size:28px;color:#1976d2;">$${stockValue.toLocaleString('es-CO')}</span>
         </div>
     `;
 }
@@ -553,7 +560,8 @@ function updateReports() {
     db.ref('bills').once('value', snap => {
         const bills = snap.val() ? Object.values(snap.val()) : [];
         const totalSales = bills.reduce((sum, b) => sum + (b.total || 0), 0);
-        document.getElementById('sales').innerHTML = `Total Sales: $${totalSales.toLocaleString('en-US')}`;
+        document.getElementById('sales').innerHTML = `Total Sales: $${totalSales.toLocaleString('es-CO')}`;
+        
         const ctx = document.getElementById('chart');
         if (chartInstance) chartInstance.destroy();
         chartInstance = new Chart(ctx, {
@@ -564,23 +572,94 @@ function updateReports() {
     });
 }
 
+// ================== BILLING (COMPLETE & FIXED) ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
+
     let subtotal = 0;
-    cart.forEach(item => subtotal += item.qty * (item.price || 0));
+    let itemsHTML = '';
+
+    cart.forEach(item => {
+        const amount = item.qty * (item.price || 0);
+        subtotal += amount;
+        itemsHTML += `
+        <tr>
+            <td>${item.name}</td>
+            <td style="text-align:center;">${item.qty}</td>
+            <td style="text-align:right;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+            <td style="text-align:right;">$${amount.toLocaleString('es-CO')}</td>
+        </tr>`;
+    });
+
     const ivaRate = storeConfig.ivaRate;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
+
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO');
-    const billHTML = `...`; // (your existing billHTML remains the same)
-    // ... (rest of generateBill is unchanged - keep your original code for this function)
+    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    const customer = document.getElementById('customerName').value.trim() || "Cliente General";
+    const customerIdVal = document.getElementById('customerId').value.trim();
+
+    const billHTML = `
+    <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;padding:20px;border:2px solid #1976d2;border-radius:10px;background:#fff;">
+        <div style="text-align:center;margin-bottom:20px;">
+            <img src="${storeConfig.logoUrl}" alt="Logo" style="max-width:250px;height:auto;">
+            <h1 style="margin:10px 0 5px;color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:0;font-size:14px;">${storeConfig.address}<br>
+            NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
+            ${storeConfig.city} | ${storeConfig.email}</p>
+        </div>
+        <hr style="border:1px solid #1976d2;">
+        <div style="display:flex;justify-content:space-between;margin:20px 0;">
+            <div>
+                <strong>Factura No:</strong> ${invoiceId}<br>
+                <strong>Fecha:</strong> ${currentDate}
+            </div>
+            <div style="text-align:right;">
+                <strong>Cliente:</strong> ${customer}<br>
+                ${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}
+            </div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+            <thead>
+                <tr style="background:#f4f6f9;">
+                    <th style="border:1px solid #ddd;padding:10px;text-align:left;">Producto</th>
+                    <th style="border:1px solid #ddd;padding:10px;text-align:center;">Cant.</th>
+                    <th style="border:1px solid #ddd;padding:10px;text-align:right;">Precio</th>
+                    <th style="border:1px solid #ddd;padding:10px;text-align:right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>${itemsHTML}</tbody>
+        </table>
+
+        <div style="text-align:right;font-size:16px;line-height:1.8;">
+            <p><strong>Subtotal:</strong> $${subtotal.toLocaleString('es-CO')}</p>
+            <p><strong>IVA (${ivaRate}%):</strong> $${ivaAmount.toLocaleString('es-CO')}</p>
+            <p style="font-size:22px;color:#1976d2;margin-top:10px;"><strong>Total a Pagar:</strong> $${grandTotal.toLocaleString('es-CO')}</p>
+        </div>
+
+        <hr style="border:1px solid #1976d2;">
+        <div style="text-align:center;margin-top:25px;font-size:13px;color:#555;">
+            Gracias por su compra en Tool Store Colombia<br>
+            ¡Vuelva pronto! 🛠️
+        </div>
+    </div>`;
+
     document.getElementById('bill').innerHTML = billHTML;
+
+    // Save to Firebase
     db.ref('bills').push({
-        invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount,
-        customer: document.getElementById('customerName').value.trim() || "Walk-in Customer",
+        invoiceId,
+        date: Date.now(),
+        total: grandTotal,
+        iva: ivaAmount,
+        subtotal: subtotal,
+        customer: customer,
+        customerId: customerIdVal,
         items: cart
     });
+
     updateReports();
 }
 
@@ -614,7 +693,7 @@ function sendWhatsApp() {
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
-    initScanner();   // Live camera starts automatically
+    initScanner(); // Auto-start with improved mobile camera selection
 };
 </script>
 </body>
