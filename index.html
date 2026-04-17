@@ -8,9 +8,6 @@
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
@@ -113,22 +110,12 @@
             max-width: 500px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .close-btn {
-            font-size: 32px;
-            cursor: pointer;
-            color: #666;
-        }
+        .loading { opacity: 0.7; pointer-events: none; }
     </style>
 </head>
 <body>
 <header>
-    <img src="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/icon.png?raw=true" 
+    <img src="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/icon.png?raw=true"
          alt="Tool Store Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Tool Store POS - Colombia</h2>
     <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">
@@ -137,25 +124,26 @@
 </header>
 
 <div class="container">
+
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
-        <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px;">Starting live camera...</p>
-     
+        <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
+        
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
             <button id="flashBtn" class="flash-btn" onclick="toggleFlashlight()" style="display:none;">🔦 Flashlight OFF</button>
-            <button onclick="initScanner()" style="padding:10px 20px; background:#4caf50;">🔄 Retry Live Camera</button>
+            <button onclick="initScanner()" style="padding:10px 20px; background:#4caf50;">🔄 Start / Retry Camera</button>
         </div>
-     
+        
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <p style="font-size:13px; color:#666; text-align:center; margin-top:8px;">
-            Tip: Live camera works best on mobile. Must be on HTTPS.
+            Tip: Use on mobile with HTTPS for best camera performance.
         </p>
     </div>
 
-    <!-- ADD PRODUCT -->
+    <!-- ADD / UPDATE PRODUCT -->
     <div class="card">
         <h3>📦 Add / Update Product</h3>
         <input id="pname" placeholder="Product Name">
@@ -167,19 +155,19 @@
             <input id="pqty" type="number" placeholder="Current Stock" style="flex:1;">
             <input id="pminstock" type="number" value="5" placeholder="Minimum Stock Alert" style="flex:1;">
         </div>
-        
+       
         <label style="display:block;margin:12px 0 6px 0;font-weight:600;">📸 Product Image (optional)</label>
         <div style="display:flex; gap:10px; margin-bottom:12px;">
             <button type="button" onclick="uploadFromFile()" style="flex:1; padding:14px; background:#4caf50;">📤 Upload from Gallery</button>
             <button type="button" onclick="captureProductPhoto()" style="flex:1; padding:14px;">📸 Take Photo</button>
         </div>
-        
+       
         <input type="file" id="pimage" accept="image/*" style="display:none;">
         <div id="imagePreview" style="margin:10px 0;text-align:center;"></div>
-        
+       
         <div id="verificationBox" style="display:none; background:#e8f5e9; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;"></div>
-        
-        <button onclick="saveProduct()">Save Product</button>
+       
+        <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
     </div>
 
     <!-- INVENTORY OVERVIEW -->
@@ -206,16 +194,16 @@
             📱 SCAN TO ADD TO INVOICE
         </button>
         <div id="results"></div>
-      
+     
         <div style="display: flex; gap: 10px; margin:10px 0;">
             <input id="customerName" placeholder="Customer Name (Optional)" style="flex:1;">
             <input id="customerId" placeholder="Customer ID / NIT" style="flex:1;">
         </div>
-      
+     
         <table class="table" id="cartTable">
             <tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
         </table>
-     
+    
         <button onclick="generateBill()" class="success-btn" style="margin-top:15px; width:100%; padding:14px; font-size:17px;">
             Generate Sales Invoice
         </button>
@@ -239,7 +227,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3>⚙️ Store & Tax Configuration</h3>
-            <span class="close-btn" onclick="closeConfigModal()">×</span>
+            <span class="close-btn" onclick="closeConfigModal()" style="font-size:32px;cursor:pointer;color:#666;">×</span>
         </div>
         <input id="logoUrl" placeholder="Logo Image URL" value="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/icon.png?raw=true">
         <input id="businessName" placeholder="Business Name" value="Tool Store Colombia">
@@ -263,8 +251,7 @@ const firebaseConfig = {
   projectId: "dinamo-store-app",
   storageBucket: "dinamo-store-app.firebasestorage.app",
   messagingSenderId: "266478900382",
-  appId: "1:266478900382:web:321b8f26235e8395e2578f",
-  measurementId: "G-89RP4YRPRP"
+  appId: "1:266478900382:web:321b8f26235e8395e2578f"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -292,18 +279,21 @@ let storeConfig = {
 // ================== CONFIG MODAL ==================
 function openConfigModal() {
     document.getElementById('configModal').style.display = 'flex';
-    document.getElementById('logoUrl').value = storeConfig.logoUrl;
-    document.getElementById('businessName').value = storeConfig.businessName;
-    document.getElementById('nit').value = storeConfig.nit;
-    document.getElementById('address').value = storeConfig.address;
-    document.getElementById('email').value = storeConfig.email;
-    document.getElementById('mobile').value = storeConfig.mobile;
-    document.getElementById('city').value = storeConfig.city;
-    document.getElementById('ivaRate').value = storeConfig.ivaRate;
+    // Populate fields
+    document.getElementById('logoUrl').value = storeConfig.logoUrl || '';
+    document.getElementById('businessName').value = storeConfig.businessName || '';
+    document.getElementById('nit').value = storeConfig.nit || '';
+    document.getElementById('address').value = storeConfig.address || '';
+    document.getElementById('email').value = storeConfig.email || '';
+    document.getElementById('mobile').value = storeConfig.mobile || '';
+    document.getElementById('city').value = storeConfig.city || '';
+    document.getElementById('ivaRate').value = storeConfig.ivaRate || 19;
 }
+
 function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
 }
+
 function saveConfig() {
     storeConfig.logoUrl = document.getElementById('logoUrl').value.trim() || storeConfig.logoUrl;
     storeConfig.businessName = document.getElementById('businessName').value.trim() || "Tool Store Colombia";
@@ -313,9 +303,13 @@ function saveConfig() {
     storeConfig.mobile = document.getElementById('mobile').value.trim();
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
+
     db.ref('storeConfig').set(storeConfig)
         .then(() => alert("✅ Configuration saved successfully!"))
-        .catch(err => alert("Error: " + err.message));
+        .catch(err => {
+            console.error(err);
+            alert("Error saving configuration: " + err.message);
+        });
     closeConfigModal();
 }
 
@@ -323,13 +317,17 @@ function saveConfig() {
 function loadData() {
     db.ref('storeConfig').once('value', snap => {
         if (snap.val()) storeConfig = { ...storeConfig, ...snap.val() };
-    });
+    }).catch(err => console.error("Config load error:", err));
+
     db.ref('products').on('value', (snap) => {
         products = snap.val() ? Object.values(snap.val()) : [];
-        products.forEach(p => p.minStock = p.minStock || 5);
+        products.forEach(p => {
+            p.minStock = p.minStock || 5;
+            p.qty = p.qty || 0;
+        });
         renderProductList();
         updateInventorySummary();
-    });
+    }, err => console.error("Products load error:", err));
 }
 
 // ================== SCANNER ==================
@@ -342,61 +340,60 @@ function handleScannedCode(decodedText) {
         if (product) {
             addToCart(product);
             statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Added to invoice: ${product.name}`;
+            statusEl.textContent = `✅ Added: ${product.name}`;
         } else {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = `❌ Product ${code} not found in stock`;
+            statusEl.textContent = `❌ Product not found: ${code}`;
         }
         scanMode = 'addProduct';
-    } else if (scanMode === 'editProduct') {
+    } 
+    else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) editProduct(code);
+        else statusEl.textContent = `❌ Product not found`;
         scanMode = 'addProduct';
-    } else {
+    } 
+    else {
         document.getElementById('pcode').value = code;
-        document.getElementById('pcode').focus();
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = `✅ Barcode filled: ${code}`;
+        statusEl.textContent = `✅ Barcode: ${code}`;
     }
 }
 
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
+    statusEl.textContent = "Requesting camera...";
     statusEl.style.color = "#1976d2";
-    statusEl.textContent = "Requesting camera permission...";
 
-    if (html5QrCode) await html5QrCode.stop().catch(() => {});
+    if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+    }
 
     html5QrCode = new Html5Qrcode("reader");
+
     const config = { fps: 12, qrbox: { width: 260, height: 260 } };
 
     try {
         const cameras = await Html5Qrcode.getCameras();
         if (cameras.length === 0) throw new Error("No camera found");
 
-        let selectedCamera = cameras.find(cam => 
+        const selectedCamera = cameras.find(cam => 
             cam.label.toLowerCase().includes("back") || 
-            cam.label.toLowerCase().includes("rear") ||
-            cam.facingMode === "environment"
+            cam.label.toLowerCase().includes("rear")
         ) || cameras[cameras.length - 1];
 
-        await html5QrCode.start(selectedCamera.id, config, handleScannedCode, () => {});
+        await html5QrCode.start(selectedCamera.id, config, handleScannedCode, (error) => {
+            // Silent error during scanning
+        });
 
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "📷 Live camera active — Point barcode/QR at the camera";
+        statusEl.textContent = "📷 Camera active — Point barcode at camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
-        handleCameraError(err, statusEl);
+        console.error(err);
+        statusEl.style.color = "#d32f2f";
+        statusEl.innerHTML = `❌ Camera error: ${err.message}<br><button onclick="initScanner()" style="margin-top:8px;">Retry Camera</button>`;
     }
-}
-
-function handleCameraError(err, statusEl) {
-    statusEl.style.color = "#d32f2f";
-    document.getElementById('flashBtn').style.display = 'none';
-    let msg = "⚠️ Camera could not start.";
-    if (err.name === "NotFoundError") msg = "❌ No camera detected.";
-    else if (err.name === "NotAllowedError") msg = "❌ Camera permission denied.";
-    statusEl.innerHTML = msg + `<br><br><button onclick="initScanner()" style="padding:8px 16px;background:#1976d2;color:white;border:none;border-radius:6px;">🔄 Retry Live Camera</button>`;
 }
 
 async function toggleFlashlight() {
@@ -408,7 +405,8 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported on this device.");
+        console.warn("Torch not supported", e);
+        alert("Flashlight is not supported on this device or browser.");
         isFlashOn = false;
     }
 }
@@ -416,33 +414,34 @@ async function toggleFlashlight() {
 function startFileScan() {
     document.getElementById('fileInput').click();
 }
+
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
+    statusEl.textContent = "Processing image...";
     statusEl.style.color = "#1976d2";
-    statusEl.textContent = "Processing photo...";
+
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
     html5QrCode.scanFile(e.target.files[0], true)
         .then(decodedText => handleScannedCode(decodedText))
         .catch(() => {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = "❌ Could not read code.";
+            statusEl.textContent = "❌ Could not read barcode from photo";
         });
 });
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
-    const statusEl = document.getElementById('scannerStatus');
-    statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Point camera at barcode to add to invoice";
+    document.getElementById('scannerStatus').style.color = "#ff9800";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function scanForEdit() {
     scanMode = 'editProduct';
-    const statusEl = document.getElementById('scannerStatus');
-    statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Point camera at barcode to edit product";
+    document.getElementById('scannerStatus').style.color = "#ff9800";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
@@ -451,9 +450,11 @@ function searchProduct() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = '';
+
     if (!query) return;
-    products.filter(p =>
-        (p.name && p.name.toLowerCase().includes(query)) ||
+
+    products.filter(p => 
+        (p.name && p.name.toLowerCase().includes(query)) || 
         (p.code && p.code.toString().includes(query))
     ).forEach(p => {
         const btn = document.createElement('button');
@@ -464,13 +465,18 @@ function searchProduct() {
 }
 
 function addToCart(product) {
-    const qty = parseInt(prompt(`Quantity for "${product.name}":`, "1"));
+    const qtyStr = prompt(`Quantity for "${product.name}":`, "1");
+    const qty = parseInt(qtyStr);
     if (!qty || qty <= 0) return;
-    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available!`);
 
+    if (qty > (product.qty || 0)) {
+        return alert(`Only ${product.qty || 0} units available in stock!`);
+    }
+
+    // Deduct stock
     db.ref('products/' + product.code).update({
         qty: firebase.database.ServerValue.increment(-qty)
-    });
+    }).catch(err => console.error("Stock update error:", err));
 
     cart.push({ ...product, qty });
     renderCart();
@@ -481,7 +487,8 @@ function addToCart(product) {
 function renderCart() {
     const table = document.getElementById('cartTable');
     table.innerHTML = `<tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>`;
-    cart.forEach(item => {
+    
+    cart.forEach((item, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${item.name}</td>
@@ -497,14 +504,17 @@ function renderCart() {
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
+
     if (filtered.length === 0) {
         listDiv.innerHTML = '<p style="text-align:center;padding:20px;color:#666;">No products found</p>';
         return;
     }
+
     filtered.forEach(p => {
         const isLow = (p.qty || 0) < (p.minStock || 5);
         const div = document.createElement('div');
         div.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid #eee; ${isLow ? 'background:#ffebee;' : ''}`;
+        
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px;">
                 ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : `<div style="width:60px;height:60px;background:#eee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">No Img</div>`}
@@ -525,8 +535,8 @@ function renderProductList(filtered = products) {
 
 function filterProductList() {
     const query = document.getElementById('productSearch').value.toLowerCase().trim();
-    const filtered = products.filter(p => 
-        (p.name || '').toLowerCase().includes(query) || 
+    const filtered = products.filter(p =>
+        (p.name || '').toLowerCase().includes(query) ||
         (p.code || '').toString().includes(query)
     );
     renderProductList(filtered);
@@ -535,13 +545,16 @@ function filterProductList() {
 function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
-    db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
-        .then(() => alert("✅ Stock updated successfully"))
-        .catch(err => alert("Error: " + err.message));
+
+    db.ref('products/' + code).update({ 
+        qty: firebase.database.ServerValue.increment(qty) 
+    })
+    .then(() => alert("✅ Stock updated"))
+    .catch(err => alert("Error: " + err.message));
 }
 
 function deleteProduct(code) {
-    if (confirm(`Delete product with code ${code}?`)) {
+    if (confirm(`Delete product ${code}?`)) {
         db.ref('products/' + code).remove()
             .then(() => alert("✅ Product deleted"))
             .catch(err => alert("Error: " + err.message));
@@ -550,7 +563,8 @@ function deleteProduct(code) {
 
 function editProduct(code) {
     const p = products.find(pr => pr.code === code);
-    if (!p) return;
+    if (!p) return alert("Product not found");
+
     document.getElementById('pname').value = p.name || '';
     document.getElementById('pcode').value = p.code;
     document.getElementById('pcat').value = p.cat || '';
@@ -561,8 +575,9 @@ function editProduct(code) {
 
     const preview = document.getElementById('imagePreview');
     preview.innerHTML = p.imageUrl 
-        ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` 
+        ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">`
         : '';
+
     editMode = code;
 }
 
@@ -581,6 +596,7 @@ async function saveProduct() {
         imageUrl: ''
     };
 
+    // Keep existing image if not uploading new one
     const existing = products.find(p => p.code === code);
     if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
 
@@ -591,16 +607,25 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
+            console.error(err);
             alert("Image upload failed: " + err.message);
         }
     }
 
     const ref = db.ref('products/' + code);
-    if (editMode) {
-        ref.update(product).then(() => showVerification(true)).catch(err => alert("Error: " + err.message));
+    
+    try {
+        if (editMode) {
+            await ref.update(product);
+            showVerification(true);
+        } else {
+            await ref.set(product);
+            showVerification(false);
+        }
         editMode = null;
-    } else {
-        ref.set(product).then(() => showVerification(false)).catch(err => alert("Error: " + err.message));
+    } catch (err) {
+        console.error(err);
+        alert("Error saving product: " + err.message);
     }
 }
 
@@ -610,12 +635,12 @@ function showVerification(isUpdate) {
         <strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong><br><br>
         <strong>Barcode:</strong> ${document.getElementById('pcode').value}<br>
         <strong>Name:</strong> ${document.getElementById('pname').value || '—'}<br>
-        <strong>Price:</strong> $${parseFloat(document.getElementById('pprice').value || 0).toLocaleString('es-CO')}<br>
-        <small>This box appears only once.</small>
+        <strong>Price:</strong> $${parseFloat(document.getElementById('pprice').value || 0).toLocaleString('es-CO')}
     `;
     ver.style.display = 'block';
-    setTimeout(() => ver.style.display = 'none', 10000);
+    setTimeout(() => ver.style.display = 'none', 8000);
 
+    // Clear form
     document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
     document.getElementById('pimage').value = '';
     document.getElementById('imagePreview').innerHTML = '';
@@ -624,11 +649,11 @@ function showVerification(isUpdate) {
 function uploadFromFile() { document.getElementById('pimage').click(); }
 
 function captureProductPhoto() {
-    const temp = document.createElement('input');
-    temp.type = 'file';
-    temp.accept = 'image/*';
-    temp.capture = 'environment';
-    temp.onchange = e => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = e => {
         if (e.target.files[0]) {
             const dt = new DataTransfer();
             dt.items.add(e.target.files[0]);
@@ -636,7 +661,7 @@ function captureProductPhoto() {
             document.getElementById('pimage').dispatchEvent(new Event('change'));
         }
     };
-    temp.click();
+    input.click();
 }
 
 document.getElementById('pimage').addEventListener('change', function(e) {
@@ -661,12 +686,13 @@ function updateInventorySummary() {
     const totalProducts = products.length;
     const lowStock = products.filter(p => (p.qty || 0) < (p.minStock || 5)).length;
     const stockValue = products.reduce((sum, p) => sum + ((p.qty || 0) * (p.cost || 0)), 0);
+
     document.getElementById('inventorySummary').innerHTML = `
         <div style="background:#e8f5e9;padding:15px;border-radius:10px;text-align:center;">
             <strong>Total Products</strong><br><span style="font-size:28px;color:#2e7d32;">${totalProducts}</span>
         </div>
         <div style="background:#fff3e0;padding:15px;border-radius:10px;text-align:center;">
-            <strong>Low Stock Items</strong><br><span style="font-size:28px;color:#f57c00;">${lowStock}</span>
+            <strong>Low Stock</strong><br><span style="font-size:28px;color:#f57c00;">${lowStock}</span>
         </div>
         <div style="background:#e3f2fd;padding:15px;border-radius:10px;text-align:center;">
             <strong>Stock Value (COP)</strong><br><span style="font-size:28px;color:#1976d2;">$${stockValue.toLocaleString('es-CO')}</span>
@@ -680,15 +706,22 @@ function generateBill() {
 
     let subtotal = 0;
     let itemsHTML = '';
+
     cart.forEach(item => {
         const amount = item.qty * (item.price || 0);
         subtotal += amount;
-        itemsHTML += `<tr><td>${item.name}</td><td style="text-align:center;">${item.qty}</td><td style="text-align:right;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td><td style="text-align:right;">$${amount.toLocaleString('es-CO')}</td></tr>`;
+        itemsHTML += `<tr>
+            <td>${item.name}</td>
+            <td style="text-align:center;">${item.qty}</td>
+            <td style="text-align:right;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+            <td style="text-align:right;">$${amount.toLocaleString('es-CO')}</td>
+        </tr>`;
     });
 
-    const ivaRate = storeConfig.ivaRate;
+    const ivaRate = storeConfig.ivaRate || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
+
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
     const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
@@ -707,28 +740,35 @@ function generateBill() {
             <div style="text-align:right;"><strong>Cliente:</strong> ${customer}<br>${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-            <thead><tr style="background:#f4f6f9;"><th style="border:1px solid #ddd;padding:10px;text-align:left;">Producto</th><th style="border:1px solid #ddd;padding:10px;text-align:center;">Cant.</th><th style="border:1px solid #ddd;padding:10px;text-align:right;">Precio</th><th style="border:1px solid #ddd;padding:10px;text-align:right;">Total</th></tr></thead>
+            <thead><tr style="background:#f4f6f9;">
+                <th style="border:1px solid #ddd;padding:10px;text-align:left;">Producto</th>
+                <th style="border:1px solid #ddd;padding:10px;text-align:center;">Cant.</th>
+                <th style="border:1px solid #ddd;padding:10px;text-align:right;">Precio</th>
+                <th style="border:1px solid #ddd;padding:10px;text-align:right;">Total</th>
+            </tr></thead>
             <tbody>${itemsHTML}</tbody>
         </table>
         <div style="text-align:right;font-size:16px;line-height:1.8;">
             <p><strong>Subtotal:</strong> $${subtotal.toLocaleString('es-CO')}</p>
             <p><strong>IVA (${ivaRate}%):</strong> $${ivaAmount.toLocaleString('es-CO')}</p>
-            <p style="font-size:22px;color:#1976d2;margin-top:10px;"><strong>Total a Pagar:</strong> $${grandTotal.toLocaleString('es-CO')}</p>
+            <p style="font-size:22px;color:#1976d2;margin-top:10px;"><strong>Total:</strong> $${grandTotal.toLocaleString('es-CO')}</p>
         </div>
         <hr style="border:1px solid #1976d2;">
-        <div style="text-align:center;margin-top:25px;font-size:13px;color:#555;">Gracias por su compra en Tool Store Colombia<br>¡Vuelva pronto! 🛠️</div>
+        <div style="text-align:center;margin-top:25px;font-size:13px;color:#555;">Gracias por su compra 🛠️</div>
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
 
+    // Save to Firebase
     db.ref('bills').push({
-        invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount, subtotal: subtotal,
-        customer: customer, customerId: customerIdVal, items: cart
-    });
+        invoiceId, date: Date.now(), total: grandTotal, 
+        iva: ivaAmount, subtotal: subtotal,
+        customer, customerId: customerIdVal, items: cart
+    }).catch(err => console.error("Bill save error:", err));
 }
 
 function clearCart() {
-    if (confirm("Clear the cart?")) {
+    if (confirm("Clear cart?")) {
         cart = [];
         renderCart();
     }
@@ -736,27 +776,40 @@ function clearCart() {
 
 function downloadPDF() {
     const element = document.getElementById('bill');
-    if (!element.innerHTML) return alert("Generate an invoice first!");
-    html2pdf().from(element).save('Tool_Store_Invoice.pdf');
+    if (!element.innerHTML) return alert("Generate invoice first!");
+
+    const opt = {
+        margin: 10,
+        filename: 'Tool_Store_Invoice.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
 }
 
 function printBill() {
     const bill = document.getElementById('bill');
-    if (!bill.innerHTML) return alert("Generate an invoice first!");
+    if (!bill.innerHTML) return alert("Generate invoice first!");
+    
     const win = window.open('', '_blank');
     win.document.write(`<html><head><title>Invoice</title></head><body>${bill.innerHTML}</body></html>`);
     win.document.close();
-    win.print();
+    setTimeout(() => win.print(), 500);
 }
 
 function sendWhatsApp() {
-    const text = encodeURIComponent(document.getElementById('bill').innerText || "Tool Store Invoice");
+    const billText = document.getElementById('bill').innerText || "Tool Store Invoice";
+    const text = encodeURIComponent(billText);
     window.open(`https://wa.me/?text=${text}`, '_blank');
 }
 
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
+    // Optional: Auto start camera after load
+    // setTimeout(initScanner, 1500);
 };
 </script>
 </body>
