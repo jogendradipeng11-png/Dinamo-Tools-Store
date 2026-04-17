@@ -564,7 +564,10 @@ function editProduct(code) {
 
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
-    if (!code) return alert("Barcode/Code is required!");
+    if (!code) {
+        alert("Barcode/Code is required!");
+        return;
+    }
 
     let product = {
         name: document.getElementById('pname').value.trim() || "Unnamed Product",
@@ -577,8 +580,11 @@ async function saveProduct() {
         imageUrl: ''
     };
 
+    // Keep existing image if not uploading a new one
     const existing = products.find(p => p.code === code);
-    if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
+    if (existing && existing.imageUrl) {
+        product.imageUrl = existing.imageUrl;
+    }
 
     const file = document.getElementById('pimage').files[0];
     if (file) {
@@ -587,21 +593,37 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
+            console.error(err);
             alert("Image upload failed: " + err.message);
+            // Continue saving even if image fails
         }
     }
 
     const ref = db.ref('products/' + code);
+   
     try {
         if (editMode) {
             await ref.update(product);
             showVerification(true);
+            console.log("Product updated successfully:", code);
         } else {
             await ref.set(product);
             showVerification(false);
+            console.log("Product saved successfully:", code);
         }
         editMode = null;
+        
+        // Force refresh products list
+        setTimeout(() => {
+            db.ref('products').once('value', (snap) => {
+                products = snap.val() ? Object.values(snap.val()) : [];
+                renderProductList();
+                updateInventorySummary();
+            });
+        }, 800);
+
     } catch (err) {
+        console.error("Save error:", err);
         alert("Error saving product: " + err.message);
     }
 }
