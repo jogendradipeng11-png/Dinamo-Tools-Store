@@ -222,16 +222,6 @@
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
     </div>
 
-    <!-- REPORTS -->
-    <div class="card">
-        <h3>📈 Reports</h3>
-        <button onclick="showReports()" style="width:100%; padding:14px; margin-bottom:15px; background:#1976d2;">Show Reports (Round Chart)</button>
-        <div id="reportsArea" style="display:none;">
-            <canvas id="chart" height="200"></canvas>
-            <div id="sales" style="margin:15px 0; font-size:19px; font-weight:bold; text-align:center;"></div>
-        </div>
-    </div>
-
     <!-- INVOICE -->
     <div class="card">
         <h3>📄 Sales Invoice</h3>
@@ -325,11 +315,9 @@ function saveConfig() {
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
     db.ref('storeConfig').set(storeConfig)
-        .then(() => {
-            alert("✅ Configuration saved successfully!");
-            closeConfigModal();
-        })
-        .catch(err => alert("Error saving config: " + err.message));
+        .then(() => alert("✅ Configuration saved!"))
+        .catch(err => alert("Error: " + err.message));
+    closeConfigModal();
 }
 
 // ================== LOAD DATA ==================
@@ -343,7 +331,6 @@ function loadData() {
         renderProductList();
         updateInventorySummary();
     });
-    updateReports();
 }
 
 // ================== SCANNER ==================
@@ -352,18 +339,25 @@ function handleScannedCode(decodedText) {
     const statusEl = document.getElementById('scannerStatus');
 
     if (scanMode === 'addToBill') {
-        const p = products.find(pr => pr.code === code);
-        if (p) addToCart(p);
+        const product = products.find(p => p.code === code);
+        if (product) {
+            addToCart(product);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Added to invoice: ${product.name}`;
+        } else {
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = `❌ Product with code ${code} not found in stock`;
+        }
         scanMode = 'addProduct';
     } else if (scanMode === 'editProduct') {
-        const p = products.find(pr => pr.code === code);
-        if (p) editProduct(code);
+        const product = products.find(p => p.code === code);
+        if (product) editProduct(code);
         scanMode = 'addProduct';
     } else {
         document.getElementById('pcode').value = code;
         document.getElementById('pcode').focus();
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = `✅ Barcode "${code}" filled`;
+        statusEl.textContent = `✅ Barcode filled: ${code}`;
     }
 }
 
@@ -413,7 +407,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported on this device.");
+        alert("Flashlight not supported.");
         isFlashOn = false;
     }
 }
@@ -431,7 +425,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         .then(decodedText => handleScannedCode(decodedText))
         .catch(() => {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = "❌ Could not read code from image.";
+            statusEl.textContent = "❌ Could not read code.";
         });
 });
 
@@ -439,7 +433,7 @@ function scanForAddToBill() {
     scanMode = 'addToBill';
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Scan barcode to add to invoice";
+    statusEl.textContent = "📱 Point camera at barcode to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -447,11 +441,11 @@ function scanForEdit() {
     scanMode = 'editProduct';
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#ff9800";
-    statusEl.textContent = "📱 Scan barcode to edit product";
+    statusEl.textContent = "📱 Point camera at barcode to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
-// ================== SEARCH, CART, PRODUCT MANAGEMENT, SAVE, IMAGE, BILLING (unchanged) ==================
+// ================== SEARCH & CART ==================
 function searchProduct() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
@@ -472,7 +466,11 @@ function addToCart(product) {
     const qty = parseInt(prompt(`Quantity for "${product.name}":`, "1"));
     if (!qty || qty <= 0) return;
     if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available!`);
-    db.ref('products/' + product.code).update({ qty: firebase.database.ServerValue.increment(-qty) });
+
+    db.ref('products/' + product.code).update({
+        qty: firebase.database.ServerValue.increment(-qty)
+    });
+
     cart.push({ ...product, qty });
     renderCart();
     document.getElementById('search').value = '';
@@ -494,6 +492,7 @@ function renderCart() {
     });
 }
 
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -536,12 +535,12 @@ function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
     db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
-        .then(() => alert("✅ Stock updated successfully"))
+        .then(() => alert("✅ Stock updated"))
         .catch(err => alert("Error: " + err.message));
 }
 
 function deleteProduct(code) {
-    if (confirm(`Delete product with code ${code}?`)) {
+    if (confirm(`Delete product ${code}?`)) {
         db.ref('products/' + code).remove()
             .then(() => alert("✅ Product deleted"))
             .catch(err => alert("Error: " + err.message));
@@ -597,10 +596,10 @@ async function saveProduct() {
 
     const ref = db.ref('products/' + code);
     if (editMode) {
-        ref.update(product).then(() => showVerification(true)).catch(err => alert("Error: " + err.message));
+        ref.update(product).then(() => showVerification(true)).catch(err => alert("Error updating: " + err.message));
         editMode = null;
     } else {
-        ref.set(product).then(() => showVerification(false)).catch(err => alert("Error: " + err.message));
+        ref.set(product).then(() => showVerification(false)).catch(err => alert("Error saving: " + err.message));
     }
 }
 
@@ -674,47 +673,6 @@ function updateInventorySummary() {
     `;
 }
 
-function updateReports() {
-    // Do nothing here - reports now shown only on button click
-}
-
-// NEW: Show Reports with Round (Doughnut) Chart
-let reportChart = null;
-function showReports() {
-    const area = document.getElementById('reportsArea');
-    area.style.display = 'block';
-
-    db.ref('bills').once('value', snap => {
-        const bills = snap.val() ? Object.values(snap.val()) : [];
-        const totalSales = bills.reduce((sum, b) => sum + (b.total || 0), 0);
-
-        document.getElementById('sales').innerHTML = `Total Sales: $${totalSales.toLocaleString('es-CO')}`;
-
-        const ctx = document.getElementById('chart');
-        if (reportChart) reportChart.destroy();
-
-        reportChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Total Sales'],
-                datasets: [{
-                    data: [totalSales],
-                    backgroundColor: ['#1976d2'],
-                    borderColor: '#ffffff',
-                    borderWidth: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-    });
-}
-
 // ================== BILLING ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
@@ -766,8 +724,6 @@ function generateBill() {
         invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount, subtotal: subtotal,
         customer: customer, customerId: customerIdVal, items: cart
     });
-
-    updateReports();
 }
 
 function clearCart() {
@@ -800,7 +756,7 @@ function sendWhatsApp() {
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
-    // Camera starts only when Retry button is clicked - no auto start
+    // Camera starts only when user clicks "Retry Live Camera"
 };
 </script>
 </body>
