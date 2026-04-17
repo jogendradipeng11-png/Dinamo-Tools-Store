@@ -273,7 +273,6 @@ const storage = firebase.storage();
 
 let products = [];
 let cart = [];
-let chartInstance = null;
 let html5QrCode = null;
 let isFlashOn = false;
 let scanMode = 'addProduct';
@@ -290,7 +289,7 @@ let storeConfig = {
     ivaRate: 19
 };
 
-// ================== CONFIG MODAL ==================
+// ================== CONFIG ==================
 function openConfigModal() {
     document.getElementById('configModal').style.display = 'flex';
     document.getElementById('logoUrl').value = storeConfig.logoUrl;
@@ -341,9 +340,9 @@ function handleScannedCode(decodedText) {
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
-            addToCart(product);
+            addToCart(product);   // This will prompt for quantity only
             statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Added to invoice: ${product.name}`;
+            statusEl.textContent = `✅ Added to bill: ${product.name}`;
         } else {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product with code ${code} not found in stock`;
@@ -492,7 +491,7 @@ function renderCart() {
     });
 }
 
-// ================== PRODUCT MANAGEMENT ==================
+// ================== PRODUCT MANAGEMENT (unchanged) ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -535,12 +534,12 @@ function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
     db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
-        .then(() => alert("✅ Stock updated"))
+        .then(() => alert("✅ Stock updated successfully"))
         .catch(err => alert("Error: " + err.message));
 }
 
 function deleteProduct(code) {
-    if (confirm(`Delete product ${code}?`)) {
+    if (confirm(`Delete product with code ${code}?`)) {
         db.ref('products/' + code).remove()
             .then(() => alert("✅ Product deleted"))
             .catch(err => alert("Error: " + err.message));
@@ -596,10 +595,10 @@ async function saveProduct() {
 
     const ref = db.ref('products/' + code);
     if (editMode) {
-        ref.update(product).then(() => showVerification(true)).catch(err => alert("Error updating: " + err.message));
+        ref.update(product).then(() => showVerification(true)).catch(err => alert("Error: " + err.message));
         editMode = null;
     } else {
-        ref.set(product).then(() => showVerification(false)).catch(err => alert("Error saving: " + err.message));
+        ref.set(product).then(() => showVerification(false)).catch(err => alert("Error: " + err.message));
     }
 }
 
@@ -756,7 +755,6 @@ function sendWhatsApp() {
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
-    // Camera starts only when user clicks "Retry Live Camera"
 };
 </script>
 </body>
