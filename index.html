@@ -382,49 +382,69 @@ async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 12,                    // Higher fps = faster detection
-        qrbox: { width: 280, height: 280 },  // Slightly larger scanning area
-        aspectRatio: 1.0,
+        fps: 18, // 🔥 Faster detection (recommended 10–20)
+        
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+            // 🔥 Dynamic smart scan area
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+
+            return {
+                width: minEdge * 0.9,   // large detection area
+                height: minEdge * 0.45  // 🔥 rectangular → BEST for barcodes
+            };
+        },
+
+        aspectRatio: 1.777, // 16:9 for better camera focus
         disableFlip: false,
+
         experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true   // Much better for barcodes!
+            useBarCodeDetectorIfSupported: true // 🔥 BIG upgrade
+        },
+
+        videoConstraints: {
+            facingMode: { exact: "environment" }, // 🔥 force back camera
+
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+
+            focusMode: "continuous",   // 🔥 autofocus
+            advanced: [
+                { focusMode: "continuous" },
+                { exposureMode: "continuous" },
+                { whiteBalanceMode: "continuous" }
+            ]
         }
     };
 
     try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cameras.length === 0) throw new Error("No camera found");
-
-        // Prefer back camera (best for scanning)
-        let selectedCamera = cameras.find(cam =>
-            cam.label.toLowerCase().includes("back") ||
-            cam.label.toLowerCase().includes("rear") ||
-            cam.label.toLowerCase().includes("environment") ||
-            cam.label.toLowerCase().includes("camera2 0")
-        ) || cameras[cameras.length - 1];
-
-        await html5QrCode.start(selectedCamera.id, config, handleScannedCode, (error) => {
-            // Silent error during scanning
-        });
+        await html5QrCode.start(
+            { facingMode: "environment" }, // fallback if exact fails
+            config,
+            handleScannedCode,
+            () => {}
+        );
 
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "📷 Camera active with autofocus — Point barcode/QR clearly";
+        statusEl.textContent = "📷 Ultra-fast scanner ready — steady camera for best results";
+
         document.getElementById('flashBtn').style.display = 'inline-block';
 
     } catch (err) {
         console.error("Scanner error:", err);
-        let msg = "❌ Camera error: ";
 
-        if (err.name === "NotAllowedError") msg += "Permission denied. Allow camera.";
+        let msg = "❌ Camera error: ";
+        if (err.name === "NotAllowedError") msg += "Allow camera permission.";
         else if (err.name === "NotFoundError") msg += "No camera found.";
-        else if (location.protocol !== "https:") msg += "Must use HTTPS (not file://)";
-        else msg += err.message || "Unknown error. Try on mobile.";
+        else if (location.protocol !== "https:") msg += "Use HTTPS.";
+        else msg += err.message || "Unknown error.";
 
         statusEl.style.color = "#d32f2f";
-        statusEl.innerHTML = `${msg}<br><br><button onclick="initScanner()" style="padding:10px 20px;">Retry Camera</button>`;
+        statusEl.innerHTML = `${msg}<br><br>
+            <button onclick="initScanner()" style="padding:10px 20px;">
+                Retry Camera
+            </button>`;
     }
 }
-
 async function toggleFlashlight() {
     if (!html5QrCode) return;
     const btn = document.getElementById('flashBtn');
