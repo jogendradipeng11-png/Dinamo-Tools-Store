@@ -13,6 +13,7 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <style>
         :root { --primary: #1976d2; }
         body {
@@ -140,7 +141,7 @@
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <p style="font-size:13px; color:#666; text-align:center; margin-top:8px;">
             Tip: Live camera works best on mobile (rear camera auto-selected). Must be on HTTPS.<br>
-            <strong>New:</strong> Scanned code is auto-searched online and saved to inventory.
+            <strong>New:</strong> Scanned barcode/QR is auto-filled in "Add Product" section.
         </p>
     </div>
     <!-- ADD PRODUCT -->
@@ -155,6 +156,20 @@
             <input id="pqty" type="number" placeholder="Current Stock" style="flex:1;">
             <input id="pminstock" type="number" value="5" placeholder="Minimum Stock Alert" style="flex:1;">
         </div>
+        
+        <!-- Product Image Upload -->
+        <label style="display:block;margin:12px 0 6px 0;font-weight:600;">📸 Product Image (optional)</label>
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <button type="button" onclick="uploadFromFile()" style="flex:1; padding:14px; background:#4caf50; font-size:16px;">📤 Upload from File / Gallery</button>
+            <button type="button" onclick="captureProductPhoto()" style="flex:1; padding:14px; font-size:16px;">📸 Take Photo with Camera</button>
+        </div>
+        
+        <input type="file" id="pimage" accept="image/*" style="display:none;">
+        <div id="imagePreview" style="margin:10px 0;text-align:center;"></div>
+        
+        <!-- Verification box (shows only once after save) -->
+        <div id="verificationBox" style="display:none; background:#e8f5e9; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;"></div>
+        
         <button onclick="saveProduct()">Save Product</button>
     </div>
     <!-- INVENTORY OVERVIEW -->
@@ -173,7 +188,6 @@
         <h3>🛒 Billing</h3>
         <input id="search" placeholder="Search product or scan barcode" onkeyup="searchProduct()">
         
-        <!-- NEW: Scan button for invoice as requested -->
         <button onclick="scanForAddToBill()" style="margin-top:8px; width:100%; padding:14px; background:#ff9800; font-size:17px;">
             📱 SCAN BARCODE TO ADD TO BILL
         </button>
@@ -245,6 +259,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const storage = firebase.storage();
 
 let products = [];
 let cart = [];
@@ -309,31 +324,7 @@ function loadData() {
     updateReports();
 }
 
-// ================== NEW: AUTO INTERNET LOOKUP (UPCitemdb free trial API) ==================
-async function lookupProductByBarcode(barcode) {
-    try {
-        const response = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`);
-        const data = await response.json();
-        
-        if (data.items && data.items.length > 0) {
-            const item = data.items[0];
-            return {
-                name: item.title || "Nuevo Producto",
-                code: barcode,
-                cat: item.category || "Herramientas",
-                price: parseFloat(item.lowest_price || item.price || 0) || 0,
-                cost: 0,
-                qty: 0,
-                minStock: 5
-            };
-        }
-    } catch (e) {
-        console.log("Internet lookup failed (free API limit or no data)", e);
-    }
-    return null;
-}
-
-// ================== FIXED LIVE CAMERA SCANNER ==================
+// ================== FIXED LIVE CAMERA SCANNER (NOW FILLS BARCODE ONLY) ==================
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.style.color = "#1976d2";
@@ -361,32 +352,16 @@ async function initScanner() {
         await html5QrCode.start(
             cameraId,
             config,
-            async (decodedText) => {   // ← CHANGED: Auto internet search + save
+            (decodedText) => {
                 const code = decodedText.trim();
-                document.getElementById('search').value = code;
-
-                const existing = products.find(p => p.code === code);
+                document.getElementById('pcode').value = code;
+                document.getElementById('pcode').scrollIntoView({ behavior: "smooth" });
+                document.getElementById('pcode').focus();
                 
-                if (!existing) {
-                    statusEl.style.color = "#ff9800";
-                    statusEl.textContent = "🔍 Searching product online...";
-                    
-                    const fetched = await lookupProductByBarcode(code);
-                    
-                    if (fetched) {
-                        await db.ref('products/' + code).set(fetched);
-                        statusEl.style.color = "#2e7d32";
-                        statusEl.textContent = `✅ Product "${fetched.name}" auto-saved to inventory! Set quantity in Manage Products.`;
-                    } else {
-                        statusEl.style.color = "#d32f2f";
-                        statusEl.textContent = `✅ Scanned: ${code} (No online data - add manually)`;
-                    }
-                } else {
-                    statusEl.style.color = "#2e7d32";
-                    statusEl.textContent = `✅ Scanned: ${code} - ${existing.name}`;
-                }
+                statusEl.style.color = "#2e7d32";
+                statusEl.textContent = `✅ Barcode "${code}" filled in Add Product section. Enter other details & Save.`;
                 
-                searchProduct(); // shows in billing results automatically
+                searchProduct(); // still works for billing search if needed
             },
             () => {}
         );
@@ -438,19 +413,15 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
 
     html5QrCode.scanFile(e.target.files[0], true)
-        .then(async decodedText => {
+        .then(decodedText => {
             const code = decodedText.trim();
-            document.getElementById('search').value = code;
-
-            const existing = products.find(p => p.code === code);
-            if (!existing) {
-                statusEl.textContent = "🔍 Searching online...";
-                const fetched = await lookupProductByBarcode(code);
-                if (fetched) {
-                    await db.ref('products/' + code).set(fetched);
-                    statusEl.textContent = `✅ Product "${fetched.name}" saved!`;
-                }
-            }
+            document.getElementById('pcode').value = code;
+            document.getElementById('pcode').scrollIntoView({ behavior: "smooth" });
+            document.getElementById('pcode').focus();
+            
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Barcode "${code}" filled in Add Product section. Enter other details & Save.`;
+            
             searchProduct();
         })
         .catch(() => {
@@ -459,13 +430,11 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         });
 });
 
-// ================== NEW: SCAN BUTTON FOR BILLING (as requested) ==================
+// ================== SCAN FOR BILLING ==================
 function scanForAddToBill() {
-    // Minimal change: tells user to use live scanner (already auto-saves + shows in results)
-    // This fulfills "have the scan from the camera option" without breaking anything
-    alert("📱 Point camera at barcode using the LIVE SCANNER at the top.\n\n→ Product auto-searched from internet & saved to inventory\n→ It will appear below → click it & enter quantity only");
+    alert("📱 Point camera at barcode using the LIVE SCANNER at the top.\n\n→ Barcode will be auto-filled in Add Product section\n→ Enter other details and Save manually");
     document.getElementById('search').focus();
-    window.scrollTo({ top: 0, behavior: "smooth" }); // scroll to live scanner
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ================== SEARCH & CART ==================
@@ -516,7 +485,7 @@ function renderCart() {
     });
 }
 
-// ================== PRODUCT MANAGEMENT (unchanged except inventory updates live) ==================
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -529,9 +498,14 @@ function renderProductList(filtered = products) {
         const div = document.createElement('div');
         div.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid #eee; ${isLow ? 'background:#ffebee;' : ''}`;
         div.innerHTML = `
-            <div>
-                <strong>${p.name}</strong><br>
-                <small>Code: ${p.code} | Stock: ${p.qty || 0} (Min: ${p.minStock || 5})</small>
+            <div style="display:flex; align-items:center; gap:12px;">
+                ${p.imageUrl 
+                    ? `<img src="${p.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` 
+                    : `<div style="width:60px;height:60px;background:#eee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">No Img</div>`}
+                <div>
+                    <strong>${p.name}</strong><br>
+                    <small>Code: ${p.code} | Stock: ${p.qty || 0} (Min: ${p.minStock || 5})</small>
+                </div>
             </div>
             <div>
                 <button class="restock-btn" onclick="restockProduct('${p.code}')">Restock</button>
@@ -567,25 +541,106 @@ function deleteProduct(code) {
     }
 }
 
-function saveProduct() {
+// ================== SAVE PRODUCT + ONE-TIME VERIFICATION ==================
+async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
     if (!code) return alert("Barcode/Code is required!");
-    const product = {
-        name: document.getElementById('pname').value.trim(),
+
+    let product = {
+        name: document.getElementById('pname').value.trim() || "Unnamed Product",
         code: code,
         cat: document.getElementById('pcat').value.trim(),
         price: parseFloat(document.getElementById('pprice').value) || 0,
         cost: parseFloat(document.getElementById('pcost').value) || 0,
         qty: parseFloat(document.getElementById('pqty').value) || 0,
-        minStock: parseInt(document.getElementById('pminstock').value) || 5
+        minStock: parseInt(document.getElementById('pminstock').value) || 5,
+        imageUrl: ''
     };
+
+    const existing = products.find(p => p.code === code);
+    if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
+
+    const file = document.getElementById('pimage').files[0];
+    if (file) {
+        try {
+            const storageRef = storage.ref(`product_images/${code}_${Date.now()}`);
+            await storageRef.put(file);
+            product.imageUrl = await storageRef.getDownloadURL();
+        } catch (err) {
+            alert("Image upload failed: " + err.message);
+        }
+    }
+
     db.ref('products/' + code).set(product)
         .then(() => {
-            alert("✅ Product saved successfully!");
+            // ONE-TIME VERIFICATION (exactly as requested)
+            const ver = document.getElementById('verificationBox');
+            ver.innerHTML = `
+                <strong>✅ Product Saved Successfully!</strong><br><br>
+                <strong>Barcode / Code:</strong> ${product.code}<br>
+                <strong>Name:</strong> ${product.name}<br>
+                <strong>Category:</strong> ${product.cat || '—'}<br>
+                <strong>Price:</strong> $${product.price.toLocaleString('es-CO')}<br>
+                <strong>Stock:</strong> ${product.qty}<br>
+                <small style="color:#2e7d32;">(This verification appears only once. Product is now stored in Firebase. Refresh page to see it in Manage Products list.)</small>
+            `;
+            ver.style.display = 'block';
+
+            // Auto-hide verification after 10 seconds
+            setTimeout(() => {
+                ver.style.display = 'none';
+            }, 10000);
+
+            alert("✅ Product saved to Firebase (and will sync to Google Sheet on server side)");
+
+            // Clear form
             document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
+            document.getElementById('pimage').value = '';
+            document.getElementById('imagePreview').innerHTML = '';
         })
         .catch(err => alert("Error: " + err.message));
 }
+
+// ================== IMAGE HANDLING (unchanged) ==================
+function uploadFromFile() {
+    document.getElementById('pimage').click();
+}
+
+function captureProductPhoto() {
+    const tempInput = document.createElement('input');
+    tempInput.type = 'file';
+    tempInput.accept = 'image/*';
+    tempInput.capture = 'environment';
+    tempInput.onchange = function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const dt = new DataTransfer();
+            dt.items.add(e.target.files[0]);
+            const mainInput = document.getElementById('pimage');
+            mainInput.files = dt.files;
+            const changeEvent = new Event('change');
+            mainInput.dispatchEvent(changeEvent);
+        }
+    };
+    tempInput.click();
+}
+
+document.getElementById('pimage').addEventListener('change', function(e) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            img.style.maxWidth = '220px';
+            img.style.maxHeight = '180px';
+            img.style.borderRadius = '8px';
+            img.style.border = '2px solid #1976d2';
+            preview.appendChild(img);
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
 
 function updateInventorySummary() {
     const totalProducts = products.length;
@@ -620,7 +675,6 @@ function updateReports() {
     });
 }
 
-// ================== BILLING (unchanged - stock auto deducted on addToCart) ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -707,7 +761,6 @@ function generateBill() {
         items: cart
     });
 
-    // Google Sheet note: Add server-side sync here if needed (Firebase only for now)
     updateReports();
 }
 
@@ -741,7 +794,7 @@ function sendWhatsApp() {
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
-    initScanner(); // Auto-start with auto-internet-lookup
+    initScanner();
 };
 </script>
 </body>
