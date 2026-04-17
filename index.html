@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tool Store POS - Colombia</title>
     <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -807,7 +806,7 @@ function generateBill() {
         </div>
         <hr style="border:1px solid #1976d2;">
         <div style="display:flex;justify-content:space-between;margin:20px 0;">
-            <div>     <strong>Factura No:</strong> ${invoiceId}<br>     <strong>Fecha:</strong> ${currentDate}<br><br>      <!-- BARCODE -->     <svg id="barcode"></svg> </div>
+            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
             <div style="text-align:right;"><strong>Cliente:</strong> ${customer}<br>${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;margin:20px 0;">
@@ -836,15 +835,7 @@ function generateBill() {
         customer, customerId: customerIdVal, items: cart
     });
 }
-setTimeout(() => {
-    JsBarcode("#barcode", invoiceId, {
-        format: "CODE128",
-        lineColor: "#000",
-        width: 2,
-        height: 50,
-        displayValue: true
-    });
-}, 300);
+
 function clearCart() {
     if (confirm("Clear cart?")) {
         cart = [];
@@ -854,52 +845,17 @@ function clearCart() {
 
 function downloadPDF() {
     const element = document.getElementById('bill');
-
-    if (!element.innerHTML) {
-        return alert("Generate invoice first!");
-    }
-
-    // Clone bill to avoid layout shift during PDF generation
-    const clone = element.cloneNode(true);
-
-    // Wrap for better PDF scaling
-    const wrapper = document.createElement('div');
-    wrapper.style.width = "210mm"; // A4 width
-    wrapper.style.padding = "10mm";
-    wrapper.style.background = "#fff";
-    wrapper.appendChild(clone);
-
-    document.body.appendChild(wrapper);
-
+    if (!element.innerHTML) return alert("Generate invoice first!");
     const opt = {
-        margin: 0,
+        margin: 10,
         filename: 'Tool_Store_Invoice.pdf',
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { 
-            scale: 2,
-            useCORS: true,   // 🔥 IMPORTANT for logo from GitHub
-            allowTaint: true
-        },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait' 
-        }
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
+    html2pdf().set(opt).from(element).save();
+}
 
-    html2pdf()
-        .set(opt)
-        .from(wrapper)
-        .save()
-        .then(() => {
-            document.body.removeChild(wrapper);
-        });
-}
-html2canvas: { 
-    scale: 2,
-    useCORS: true,
-    scrollY: 0
-}
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML) return alert("Generate invoice first!");
