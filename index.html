@@ -326,9 +326,18 @@ function loadData() {
 }
 
 // ================== IMPROVED SCANNER ==================
+// ================== IMPROVED SCANNER WITH BETTER FOCUS & DETECTION ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
+
+    // Pause scanning briefly after success to avoid duplicate reads
+    if (html5QrCode) {
+        html5QrCode.pause(true);
+        setTimeout(() => {
+            if (html5QrCode) html5QrCode.resume();
+        }, 1200);
+    }
 
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
@@ -344,54 +353,75 @@ function handleScannedCode(decodedText) {
     }
     else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
-        if (product) editProduct(code);
-        else statusEl.textContent = `❌ Product not found`;
+        if (product) {
+            editProduct(code);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Loaded for edit: ${product.name}`;
+        } else {
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = `❌ Product not found`;
+        }
         scanMode = 'addProduct';
     }
     else {
         document.getElementById('pcode').value = code;
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = `✅ Barcode: ${code}`;
+        statusEl.textContent = `✅ Scanned Code: ${code}`;
     }
 }
 
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
-    statusEl.textContent = "Requesting camera access...";
+    statusEl.textContent = "Requesting camera...";
     statusEl.style.color = "#1976d2";
 
-    if (html5QrCode) await html5QrCode.stop().catch(() => {});
+    if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+    }
 
     html5QrCode = new Html5Qrcode("reader");
 
-    const config = { fps: 15, qrbox: { width: 260, height: 260 }, aspectRatio: 1.0 };
+    const config = {
+        fps: 12,                    // Higher fps = faster detection
+        qrbox: { width: 280, height: 280 },  // Slightly larger scanning area
+        aspectRatio: 1.0,
+        disableFlip: false,
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true   // Much better for barcodes!
+        }
+    };
 
     try {
         const cameras = await Html5Qrcode.getCameras();
         if (cameras.length === 0) throw new Error("No camera found");
 
-        const selectedCamera = cameras.find(cam => 
-            cam.label.toLowerCase().includes("back") || 
+        // Prefer back camera (best for scanning)
+        let selectedCamera = cameras.find(cam =>
+            cam.label.toLowerCase().includes("back") ||
             cam.label.toLowerCase().includes("rear") ||
-            cam.label.toLowerCase().includes("environment")
+            cam.label.toLowerCase().includes("environment") ||
+            cam.label.toLowerCase().includes("camera2 0")
         ) || cameras[cameras.length - 1];
 
-        await html5QrCode.start(selectedCamera.id, config, handleScannedCode, () => {});
+        await html5QrCode.start(selectedCamera.id, config, handleScannedCode, (error) => {
+            // Silent error during scanning
+        });
 
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "📷 Camera active — Point barcode at camera";
+        statusEl.textContent = "📷 Camera active with autofocus — Point barcode/QR clearly";
         document.getElementById('flashBtn').style.display = 'inline-block';
+
     } catch (err) {
-        console.error(err);
+        console.error("Scanner error:", err);
         let msg = "❌ Camera error: ";
-        
-        if (err.name === "NotAllowedError") msg += "Permission denied. Allow camera access.";
+
+        if (err.name === "NotAllowedError") msg += "Permission denied. Allow camera.";
         else if (err.name === "NotFoundError") msg += "No camera found.";
         else if (location.protocol !== "https:") msg += "Must use HTTPS (not file://)";
         else msg += err.message || "Unknown error. Try on mobile.";
 
         statusEl.style.color = "#d32f2f";
-        statusEl.innerHTML = `${msg}<br><br><button onclick="initScanner()" style="padding:10px 20px;">Retry</button>`;
+        statusEl.innerHTML = `${msg}<br><br><button onclick="initScanner()" style="padding:10px 20px;">Retry Camera</button>`;
     }
 }
 
@@ -405,6 +435,7 @@ async function toggleFlashlight() {
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
         alert("Flashlight not supported on this device.");
+        isFlashOn = false;
     }
 }
 
@@ -421,24 +452,24 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
 
     html5QrCode.scanFile(e.target.files[0], true)
-        .then(handleScannedCode)
+        .then(decodedText => handleScannedCode(decodedText))
         .catch(() => {
             statusEl.style.color = "#d32f2f";
-            statusEl.textContent = "❌ Could not read barcode from photo";
+            statusEl.textContent = "❌ Could not read code from photo";
         });
 });
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode to add to invoice";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function scanForEdit() {
     scanMode = 'editProduct';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode to edit product";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
