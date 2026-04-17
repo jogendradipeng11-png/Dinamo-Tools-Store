@@ -615,28 +615,37 @@ function editProduct(code) {
 
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
+
     if (!code) {
-        alert("Barcode/Code is required!");
+        alert("❌ Barcode/Code is required!");
         return;
     }
 
+    const name = document.getElementById('pname').value.trim() || "Unnamed Product";
+    const price = parseFloat(document.getElementById('pprice').value) || 0;
+    const cost = parseFloat(document.getElementById('pcost').value) || 0;
+    const qty = parseFloat(document.getElementById('pqty').value) || 0;
+    const minStock = parseInt(document.getElementById('pminstock').value) || 5;
+    const cat = document.getElementById('pcat').value.trim();
+
     let product = {
-        name: document.getElementById('pname').value.trim() || "Unnamed Product",
-        code: code,
-        cat: document.getElementById('pcat').value.trim(),
-        price: parseFloat(document.getElementById('pprice').value) || 0,
-        cost: parseFloat(document.getElementById('pcost').value) || 0,
-        qty: parseFloat(document.getElementById('pqty').value) || 0,
-        minStock: parseInt(document.getElementById('pminstock').value) || 5,
+        name,
+        code,
+        cat,
+        price,
+        cost,
+        qty,
+        minStock,
         imageUrl: ''
     };
 
-    // Keep existing image if not uploading a new one
+    // 🔥 Keep existing image if already present
     const existing = products.find(p => p.code === code);
     if (existing && existing.imageUrl) {
         product.imageUrl = existing.imageUrl;
     }
 
+    // 🔥 Upload image if new file selected
     const file = document.getElementById('pimage').files[0];
     if (file) {
         try {
@@ -644,45 +653,51 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            console.error("Image upload error:", err);
-            alert("Image upload failed, but product data will still be saved.");
+            console.error("❌ Image upload error:", err);
+            alert("⚠️ Image upload failed, saving product without image.");
         }
     }
 
-    const ref = db.ref('products/' + code);
-   
     try {
-        if (editMode) {
-            await ref.update(product);
-            console.log("✅ Product UPDATED successfully in Firebase:", code);
-        } else {
-            await ref.set(product);
-            console.log("✅ Product SAVED successfully to Firebase:", code);
-        }
+        // ✅ CORRECT Firebase write path
+        const ref = db.ref('products').child(code);
 
-        // Show success message popup
+        // 🔥 SAVE TO FIREBASE
+        await ref.set(product);  // overwrites safely :contentReference[oaicite:0]{index=0}
+
+        console.log("✅ Product saved to Firebase:", product);
+
+        // ✅ FORCE SUCCESS MESSAGE
+        alert("✅ Product saved to cloud successfully!");
+
+        // ✅ SHOW UI VERIFICATION
         showVerification(!!editMode);
 
-        // Reset edit mode
+        // RESET EDIT MODE
         editMode = null;
 
-        // Force refresh products from Firebase Cloud after save
-        setTimeout(() => {
-            db.ref('products').once('value', (snap) => {
-                products = snap.val() ? Object.values(snap.val()) : [];
-                products.forEach(p => {
-                    p.minStock = p.minStock || 5;
-                    p.qty = p.qty || 0;
-                });
-                renderProductList();
-                updateInventorySummary();
-                console.log("✅ Product list refreshed from Firebase Cloud");
-            });
-        }, 800);
+        // 🔥 FORCE REFRESH FROM CLOUD
+        const snap = await db.ref('products').once('value');
+        products = snap.val() ? Object.values(snap.val()) : [];
+
+        products.forEach(p => {
+            p.minStock = p.minStock || 5;
+            p.qty = p.qty || 0;
+        });
+
+        renderProductList();
+        updateInventorySummary();
+
+        console.log("✅ Data refreshed from Firebase");
 
     } catch (err) {
-        console.error("❌ Firebase save error:", err);
-        alert("Failed to save product to cloud.\nError: " + err.message + "\n\nCheck console (F12) for details.");
+        console.error("❌ Firebase save failed:", err);
+
+        alert(
+            "❌ Failed to save product!\n\n" +
+            "Reason: " + err.message +
+            "\n\nCheck:\n- Internet\n- Firebase rules\n- Console (F12)"
+        );
     }
 }
 
