@@ -593,9 +593,8 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            console.error(err);
-            alert("Image upload failed: " + err.message);
-            // Continue saving even if image fails
+            console.error("Image upload error:", err);
+            alert("Image upload failed, but product data will still be saved.");
         }
     }
 
@@ -604,27 +603,35 @@ async function saveProduct() {
     try {
         if (editMode) {
             await ref.update(product);
-            showVerification(true);
-            console.log("Product updated successfully:", code);
+            console.log("✅ Product UPDATED successfully in Firebase:", code);
         } else {
             await ref.set(product);
-            showVerification(false);
-            console.log("Product saved successfully:", code);
+            console.log("✅ Product SAVED successfully to Firebase:", code);
         }
+
+        // Show success message popup
+        showVerification(!!editMode);
+
+        // Reset edit mode
         editMode = null;
-        
-        // Force refresh products list
+
+        // Force refresh products from Firebase Cloud after save
         setTimeout(() => {
             db.ref('products').once('value', (snap) => {
                 products = snap.val() ? Object.values(snap.val()) : [];
+                products.forEach(p => {
+                    p.minStock = p.minStock || 5;
+                    p.qty = p.qty || 0;
+                });
                 renderProductList();
                 updateInventorySummary();
+                console.log("✅ Product list refreshed from Firebase Cloud");
             });
         }, 800);
 
     } catch (err) {
-        console.error("Save error:", err);
-        alert("Error saving product: " + err.message);
+        console.error("❌ Firebase save error:", err);
+        alert("Failed to save product to cloud.\nError: " + err.message + "\n\nCheck console (F12) for details.");
     }
 }
 
