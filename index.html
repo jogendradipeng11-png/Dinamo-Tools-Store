@@ -193,6 +193,9 @@
             Generate Sales Invoice
         </button>
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
+        <button onclick="restoreStock()" style="background:#f44336;">
+    ❌ Cancel Invoice & Restore Stock
+</button>
     </div>
     <!-- INVOICE -->
     <div class="card">
@@ -200,7 +203,8 @@
         <div id="bill"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
             <button onclick="downloadPDF()" style="padding:12px 20px;">⬇️ Download PDF</button>
-            <button onclick="printBill()" style="padding:12px 20px;">🖨️ Print Invoice</button>
+            <button onclick="PrintInvoice()" style="padding:12px 20px;">🖨️ Print Invoice</button>
+            <button onclick="printThermalBill()">🧾 Thermal Print (80mm)</button>
             <button onclick="sendWhatsApp()" style="padding:12px 20px;">📱 Send via WhatsApp</button>
         </div>
     </div>
@@ -241,6 +245,7 @@ const db = firebase.database();
 const storage = firebase.storage();
 let products = [];
 let cart = [];
+let lastInvoiceCart = [];
 let html5QrCode = null;
 let isFlashOn = false;
 let scanMode = 'addProduct';
@@ -413,15 +418,16 @@ function addToCart(product) {
     const qtyStr = prompt(`Quantity for "${product.name}":`, "1");
     const qty = parseInt(qtyStr);
     if (!qty || qty <= 0) return;
-    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available in stock!`);
-   
-    db.ref('products/' + product.code).update({
-        qty: firebase.database.ServerValue.increment(-qty)
-    });
-    cart.push({ ...product, qty });
+
+    const existing = cart.find(item => item.code === product.code);
+
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        cart.push({ ...product, qty });
+    }
+
     renderCart();
-    document.getElementById('search').value = '';
-    document.getElementById('results').innerHTML = '';
 }
 function renderCart() {
     const table = document.getElementById('cartTable');
@@ -572,11 +578,15 @@ async function generateBill() {
                 <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
-
+    
     const ivaRate = storeConfig.ivaRate || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
-    const invoiceId = "INV-" + Date.now().toString().slice(-8);
+    const counterRef = db.ref('counters/invoice');
+    const snapshot = await counterRef.once('value');
+    let nextNumber = (snapshot.val() || 0) + 1;
+    await counterRef.set(nextNumber);
+    const invoiceId = "INV-" + String(nextNumber).padStart(6, "0");
     const currentDate = new Date().toLocaleString('es-CO', {
         timeZone: 'America/Bogota',
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -588,7 +598,7 @@ async function generateBill() {
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" alt="Dinamo Tools Sales & Service" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
+            <img src="${logoSrc}" crossorigin="anonymous" alt="Dinamo Tools Sales & Service" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -632,33 +642,49 @@ async function generateBill() {
         </div>
     </div>`;
 
-    document.getElementById('bill').innerHTML = billHTML;
-}
+document.getElementById('bill').innerHTML = billHTML;
 
+// reduce stock
+lastInvoiceCart = [...cart];
+
+cart.forEach(item => {
+    db.ref('products/' + item.code).update({
+        qty: firebase.database.ServerValue.increment(-item.qty)
+    });
+});
+
+// SAVE INVOICE (FIXED POSITION)
+db.ref('invoices/' + invoiceId).set({
+    id: invoiceId,
+    date: new Date().toISOString(),
+    customer: customer,
+    items: cart,
+    subtotal,
+    iva: ivaAmount,
+    total: grandTotal
+});
 // ================== DOWNLOAD PDF ==================
 async function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
         return alert("❌ Please click 'Generate Sales Invoice' first!");
     }
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    const opt = {
-        margin: [20, 15, 20, 15],
-        filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            letterRendering: true,
-            scrollY: 0
-        },
-        jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait'
-        }
-    };
+    await new Promise(resolve => setTimeout(resolve, 1500));
+const opt = {
+    margin: [20, 15, 20, 15],
+    filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+    },
+    jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+    }
+};
     try {
         await html2pdf().set(opt).from(element).save();
     } catch (err) {
@@ -674,8 +700,7 @@ function printBill() {
     printWindow.document.write(`
         <html>
         <head>
-            const logoSrc = storeConfig.logoUrl || "https://i.imgur.com/xCbfxgt.png";
-            <title>Factura - Dinamo Tools Sales & Service</title>
+                <title>Factura - Dinamo Tools Sales & Service</title>
             <style>
                 @page { size: A4; margin: 15mm; }
                 body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; }
@@ -698,12 +723,63 @@ function clearCart() {
         renderCart();
     }
 }
+// ✅ ADD HERE (perfect place)
+function restoreStock() {
+    if (!lastInvoiceCart.length) {
+        return alert("No invoice to restore!");
+    }
+
+    if (!confirm("Cancel last invoice and restore stock?")) return;
+
+    lastInvoiceCart.forEach(item => {
+        db.ref('products/' + item.code).update({
+            qty: firebase.database.ServerValue.increment(item.qty)
+        });
+    });
+
+    lastInvoiceCart = [];
+    cart = [];
+    renderCart();
+    document.getElementById('bill').innerHTML = '';
+
+    alert("✅ Stock restored and invoice canceled!");
+}
 function sendWhatsApp() {
     const billText = document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice";
     const text = encodeURIComponent(billText);
     window.open(`https://wa.me/?text=${text}`, '_blank');
 }
+function printThermalBill() {
+    const bill = document.getElementById('bill');
+    if (!bill.innerHTML.trim()) return alert("Generate invoice first!");
 
+    const thermalWindow = window.open('', '_blank');
+
+    thermalWindow.document.write(`
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: monospace;
+                    width: 80mm;
+                    margin: 0;
+                    padding: 10px;
+                }
+                h2, p { text-align: center; margin: 4px 0; }
+                table { width: 100%; font-size: 12px; }
+                td { padding: 4px 0; }
+                .total { font-weight: bold; font-size: 14px; }
+            </style>
+        </head>
+        <body onload="window.print(); window.close();">
+            ${bill.innerText.replace(/\n/g, "<br>")}
+        </body>
+        </html>
+    `);
+
+    thermalWindow.document.close();
+}
+    
 // ================== INITIALIZE ==================
 window.onload = () => {
     loadData();
