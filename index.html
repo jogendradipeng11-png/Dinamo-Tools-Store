@@ -205,6 +205,7 @@
         </div>
     </div>
 </div>
+
 <!-- CONFIG MODAL -->
 <div id="configModal" class="modal">
     <div class="modal-content">
@@ -548,7 +549,7 @@ function updateInventorySummary() {
         </div>
     `;
 }
-// ================== GENERATE BILL ==================
+// ================== GENERATE BILL (Updated with correct name & logo) ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
     let subtotal = 0;
@@ -575,6 +576,7 @@ async function generateBill() {
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
     const logoSrc = storeConfig.logoUrl || "https://i.imgur.com/xCbfxgt.png";
+
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
