@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-    <!-- QR Code Library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
     <style>
@@ -112,13 +111,27 @@
             margin: 8px 0;
             font-weight: 500;
         }
-        .nequi-section {
-            margin-top: 30px;
-            padding: 20px;
+        .payment-section {
+            margin-top: 35px;
+            padding: 25px;
             border: 2px dashed #4caf50;
             border-radius: 12px;
             background: #f9fff9;
-            text-align: center;
+        }
+        .payment-option {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+        .qr-container {
+            margin: 15px auto;
+            display: inline-block;
+            padding: 12px;
+            background: white;
+            border: 3px solid #4caf50;
+            border-radius: 12px;
         }
     </style>
 </head>
@@ -126,18 +139,16 @@
 <header>
     <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
-    <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px; margin-top:8px;">
-        ⚙️ Configuration
-    </button>
+    <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px; margin-top:8px;">⚙️ Configuration</button>
 </header>
 <div class="container">
+
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
         <p class="scanner-note">⚠️ Important: Must be opened with HTTPS. Best on mobile.</p>
- 
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
             <button id="flashBtn" class="flash-btn" onclick="toggleFlashlight()" style="display:none;">🔦 Flashlight OFF</button>
@@ -177,9 +188,7 @@
     <!-- MANAGE PRODUCTS -->
     <div class="card">
         <h3>🗂️ Manage Products & Stock</h3>
-        <button onclick="scanForEdit()" style="margin-bottom:12px; width:100%; padding:14px; background:#ff9800; font-size:17px;">
-            📱 SCAN TO EDIT PRODUCT
-        </button>
+        <button onclick="scanForEdit()" style="margin-bottom:12px; width:100%; padding:14px; background:#ff9800; font-size:17px;">📱 SCAN TO EDIT PRODUCT</button>
         <input id="productSearch" placeholder="Search products..." onkeyup="filterProductList()" style="margin-bottom:15px;">
         <div id="productList" style="max-height: 420px; overflow-y: auto;"></div>
     </div>
@@ -188,9 +197,7 @@
     <div class="card">
         <h3>🛒 Billing</h3>
         <input id="search" placeholder="Search product or scan barcode" onkeyup="searchProduct()">
-        <button onclick="scanForAddToBill()" style="margin-top:8px; width:100%; padding:14px; background:#ff9800; font-size:17px;">
-            📱 SCAN TO ADD TO INVOICE
-        </button>
+        <button onclick="scanForAddToBill()" style="margin-top:8px; width:100%; padding:14px; background:#ff9800; font-size:17px;">📱 SCAN TO ADD TO INVOICE</button>
         <div id="results"></div>
         <div style="display: flex; gap: 10px; margin:10px 0;">
             <input id="customerName" placeholder="Customer Name (Optional)" style="flex:1;">
@@ -199,9 +206,7 @@
         <table class="table" id="cartTable">
             <tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
         </table>
-        <button onclick="generateBill()" class="success-btn" style="margin-top:15px; width:100%; padding:14px; font-size:17px;">
-            Generate Sales Invoice
-        </button>
+        <button onclick="generateBill()" class="success-btn" style="margin-top:15px; width:100%; padding:14px; font-size:17px;">Generate Sales Invoice</button>
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
         <button onclick="restoreStock()" class="danger-btn" style="margin-top:8px; width:100%;">❌ Cancel Invoice & Restore Stock</button>
     </div>
@@ -210,7 +215,6 @@
     <div class="card">
         <h3>📄 Sales Invoice</h3>
         <div id="bill"></div>
-        <!-- Hidden container for PDF generation -->
         <div id="pdfContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; padding: 30px; border: 5px solid #1976d2; border-radius: 15px; font-family: 'Segoe UI', Arial, sans-serif;"></div>
         
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
@@ -238,11 +242,13 @@
         <label>IVA Rate (%)</label>
         <input id="ivaRate" type="number" step="0.1" value="19">
         
-        <!-- Nequi Link -->
         <label style="display:block; margin-top:15px; font-weight:600;">💰 Nequi Payment Link</label>
-        <input id="nequiLink" placeholder="https://clientes.nequi.com.co/recargas" value="https://clientes.nequi.com.co/recargas">
+        <input id="nequiLink" value="https://clientes.nequi.com.co/recargas">
         
-        <button onclick="saveConfig()" style="margin-top:15px; padding:14px;">Save Configuration</button>
+        <label style="display:block; margin-top:15px; font-weight:600;">🏦 PSE Payment Link (from Wompi, PayU, ePayco, etc.)</label>
+        <input id="pseLink" placeholder="Paste your PSE payment link" value="">
+        
+        <button onclick="saveConfig()" style="margin-top:20px; padding:14px;">Save Configuration</button>
     </div>
 </div>
 
@@ -278,7 +284,8 @@ let storeConfig = {
     mobile: "+57 300 123 4567",
     city: "Bogotá",
     ivaRate: 19,
-    nequiLink: "https://clientes.nequi.com.co/recargas"
+    nequiLink: "https://clientes.nequi.com.co/recargas",
+    pseLink: ""
 };
 
 // ================== CONFIG MODAL ==================
@@ -293,6 +300,7 @@ function openConfigModal() {
     document.getElementById('city').value = storeConfig.city || '';
     document.getElementById('ivaRate').value = storeConfig.ivaRate || 19;
     document.getElementById('nequiLink').value = storeConfig.nequiLink || "https://clientes.nequi.com.co/recargas";
+    document.getElementById('pseLink').value = storeConfig.pseLink || "";
 }
 
 function closeConfigModal() {
@@ -309,6 +317,7 @@ function saveConfig() {
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
     storeConfig.nequiLink = document.getElementById('nequiLink').value.trim() || "https://clientes.nequi.com.co/recargas";
+    storeConfig.pseLink = document.getElementById('pseLink').value.trim();
 
     db.ref('storeConfig').set(storeConfig)
         .then(() => alert("✅ Configuration saved successfully!"))
@@ -347,8 +356,7 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found: ${code}`;
         }
-    }
-    else if (scanMode === 'editProduct') {
+    } else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) {
             editProduct(code);
@@ -358,8 +366,7 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found`;
         }
-    }
-    else {
+    } else {
         document.getElementById('pcode').value = code;
         statusEl.style.color = "#2e7d32";
         statusEl.textContent = `✅ Scanned Code: ${code}`;
@@ -598,7 +605,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== GENERATE BILL WITH MANUAL NEQUI AMOUNT ==================
+// ================== GENERATE BILL WITH NEQUI & PSE ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -676,15 +683,36 @@ async function generateBill() {
             </table>
         </div>
 
-        <!-- Manual Nequi QR Section -->
-        <div class="nequi-section">
-            <h4 style="color:#2e7d32; margin:0 0 15px 0;">💰 Paga con Nequi</h4>
-            <p style="margin:10px 0 15px 0;">Monto para el código QR (puedes cambiarlo):</p>
-            <input id="nequiManualAmount" type="number" value="${Math.round(grandTotal)}" 
-                   style="width:250px; padding:12px; font-size:20px; text-align:center; border:2px solid #4caf50; border-radius:8px; margin-bottom:12px;">
-            <br>
-            <button onclick="updateNequiQR()" style="padding:10px 25px; background:#4caf50; font-size:16px;">Actualizar QR</button>
-            <div id="nequiQRContainer" style="margin:25px auto; display:inline-block; padding:12px; background:white; border:3px solid #4caf50; border-radius:12px;"></div>
+        <!-- Nequi & PSE -->
+        <div class="payment-section">
+            <h3 style="text-align:center; color:#1976d2;">💰 Paga Fácilmente con Nequi o PSE</h3>
+            
+            <div class="payment-option">
+                <h4 style="color:#2e7d32;">📱 Nequi</h4>
+                <p>Monto:</p>
+                <input id="nequiManualAmount" type="number" value="${Math.round(grandTotal)}" style="width:260px; padding:12px; font-size:18px; text-align:center; border:2px solid #4caf50; border-radius:8px;">
+            </div>
+
+            <div class="payment-option">
+                <h4 style="color:#1976d2;">🏦 PSE</h4>
+                <p>Monto:</p>
+                <input id="pseManualAmount" type="number" value="${Math.round(grandTotal)}" style="width:260px; padding:12px; font-size:18px; text-align:center; border:2px solid #1976d2; border-radius:8px;">
+            </div>
+
+            <div style="text-align:center; margin:20px 0;">
+                <button onclick="updatePaymentQRs()" style="padding:12px 30px; background:#4caf50; font-size:16px;">Actualizar QR Codes</button>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:40px; margin-top:20px;">
+                <div style="text-align:center;">
+                    <strong>Nequi QR</strong><br>
+                    <div id="nequiQRContainer" class="qr-container"></div>
+                </div>
+                <div style="text-align:center;">
+                    <strong>PSE QR</strong><br>
+                    <div id="pseQRContainer" class="qr-container"></div>
+                </div>
+            </div>
         </div>
 
         <div style="text-align:center; margin-top:50px; color:#555; font-size:15px;">
@@ -695,8 +723,7 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
     document.getElementById('pdfContainer').innerHTML = billHTML;
 
-    // Generate QR Code
-    setTimeout(updateNequiQR, 300);
+    setTimeout(updatePaymentQRs, 300);
 
     lastInvoiceCart = [...cart];
     cart.forEach(item => {
@@ -719,34 +746,53 @@ async function generateBill() {
     renderCart();
 }
 
-// NEW: Update Nequi QR with manual amount
-function updateNequiQR() {
-    const amountInput = document.getElementById('nequiManualAmount');
-    let amount = parseFloat(amountInput.value) || 0;
-    if (amount <= 0) amount = 1000;
+// Update QR codes with pre-filled amount
+function updatePaymentQRs() {
+    // Nequi
+    let nequiAmt = parseFloat(document.getElementById('nequiManualAmount').value) || 0;
+    if (nequiAmt <= 0) nequiAmt = 1000;
+    const nequiUrl = `${storeConfig.nequiLink}?amount=${Math.round(nequiAmt)}`;
 
-    const paymentUrl = `${storeConfig.nequiLink}?amount=${Math.round(amount)}`;
-
-    const qrContainer = document.getElementById('nequiQRContainer');
-    if (qrContainer) {
-        qrContainer.innerHTML = '';
-        new QRCode(qrContainer, {
-            text: paymentUrl,
-            width: 240,
-            height: 240,
+    const nequiQR = document.getElementById('nequiQRContainer');
+    if (nequiQR) {
+        nequiQR.innerHTML = '';
+        new QRCode(nequiQR, {
+            text: nequiUrl,
+            width: 220,
+            height: 220,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
     }
+
+    // PSE
+    let pseAmt = parseFloat(document.getElementById('pseManualAmount').value) || 0;
+    if (pseAmt <= 0) pseAmt = 1000;
+    const pseUrl = storeConfig.pseLink ? `${storeConfig.pseLink}?amount=${Math.round(pseAmt)}` : "";
+
+    const pseQR = document.getElementById('pseQRContainer');
+    if (pseQR) {
+        pseQR.innerHTML = '';
+        if (pseUrl) {
+            new QRCode(pseQR, {
+                text: pseUrl,
+                width: 220,
+                height: 220,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } else {
+            pseQR.innerHTML = '<p style="color:#f44336; padding:40px 20px;">Configure PSE link in Configuration</p>';
+        }
+    }
 }
 
-// ================== OTHER FUNCTIONS (unchanged) ==================
+// ================== PRINT & WHATSAPP ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
-    if (!billElement || !billElement.innerHTML.trim()) {
-        return alert("❌ Please generate the invoice first!");
-    }
+    if (!billElement || !billElement.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <!DOCTYPE html>
@@ -756,9 +802,6 @@ function downloadPDF() {
             <style>
                 @page { size: A4; margin: 15mm; }
                 body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 12px 10px; border: 1px solid #ddd; }
-                th { background: #1976d2; color: white; }
             </style>
         </head>
         <body onload="window.print();">
@@ -794,8 +837,30 @@ function PrintInvoice() {
 }
 
 function printThermalBill() {
-    alert("Thermal print does not include dynamic QR.\nUse PDF or normal Print for Nequi QR.");
+    alert("Thermal print shows payment links.\nFor best QR experience use PDF or normal Print.");
     PrintInvoice();
+}
+
+function sendWhatsApp() {
+    const nequiAmt = document.getElementById('nequiManualAmount') ? document.getElementById('nequiManualAmount').value : 0;
+    const pseAmt = document.getElementById('pseManualAmount') ? document.getElementById('pseManualAmount').value : 0;
+    const nequiUrl = `${storeConfig.nequiLink}?amount=${Math.round(nequiAmt)}`;
+    const pseUrl = storeConfig.pseLink ? `${storeConfig.pseLink}?amount=${Math.round(pseAmt)}` : "";
+
+    let extra = `\n\n💰 Paga directamente:\nNequi: ${nequiUrl}`;
+    if (pseUrl) extra += `\nPSE: ${pseUrl}`;
+
+    const billText = (document.getElementById('bill').innerText || "Dinamo Tools Invoice") + extra;
+    window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
+}
+
+function uploadFromFile() {
+    document.getElementById('pimage').click();
+}
+
+function captureProductPhoto() {
+    alert("📸 Camera capture not fully implemented.\nUse 'Upload from Gallery' instead.");
+    document.getElementById('pimage').click();
 }
 
 function clearCart() {
@@ -806,7 +871,9 @@ function clearCart() {
 }
 
 function restoreStock() {
-    if (!lastInvoiceCart.length) return alert("No invoice to restore!");
+    if (!lastInvoiceCart.length) {
+        return alert("No invoice to restore!");
+    }
     if (!confirm("Cancel last invoice and restore stock?")) return;
     lastInvoiceCart.forEach(item => {
         db.ref('products/' + item.code).update({
@@ -818,21 +885,6 @@ function restoreStock() {
     renderCart();
     document.getElementById('bill').innerHTML = '';
     alert("✅ Stock restored and invoice canceled!");
-}
-
-function sendWhatsApp() {
-    const billText = document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice";
-    const text = encodeURIComponent(billText);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-}
-
-function uploadFromFile() {
-    document.getElementById('pimage').click();
-}
-
-function captureProductPhoto() {
-    alert("📸 Camera capture not fully implemented.\nUse 'Upload from Gallery' instead.");
-    document.getElementById('pimage').click();
 }
 
 // ================== INITIALIZE ==================
