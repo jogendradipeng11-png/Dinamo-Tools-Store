@@ -678,21 +678,21 @@ function updateInventorySummary() {
 }
 
 // ================== FIXED BILL GENERATION WITH LOGO ==================
+// ================== FIXED BILL GENERATION WITH FULL BORDER & LOGO ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
     let subtotal = 0;
     let itemsHTML = '';
-
     cart.forEach(item => {
         const amount = item.qty * (item.price || 0);
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:10px; border-bottom:1px solid #ddd;">${item.name}</td>
-                <td style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
-                <td style="padding:10px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:10px; text-align:right; border-bottom:1px solid #ddd;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:10px 12px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:10px 12px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:10px 12px; text-align:right; border-bottom:1px solid #ddd;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -701,7 +701,7 @@ function generateBill() {
     const grandTotal = subtotal + ivaAmount;
 
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', { 
+    const currentDate = new Date().toLocaleString('es-CO', {
         timeZone: 'America/Bogota',
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
@@ -710,63 +710,87 @@ function generateBill() {
     const customerIdVal = document.getElementById('customerId').value.trim();
 
     const billHTML = `
-    <div id="invoiceContent" style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
-        <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
+    <div id="invoiceContent" style="max-width: 800px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; 
+        padding: 30px; background: #fff; color: #333; line-height: 1.6; 
+        border: 3px solid #1976d2; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        
+        <!-- Header with Logo -->
+        <div style="text-align:center; margin-bottom: 30px; border-bottom: 3px solid #1976d2; padding-bottom: 20px;">
             <img src="${storeConfig.logoUrl}" 
                  alt="Tool Store Logo" 
-                 style="max-width:180px; height:auto; margin-bottom:12px;" 
+                 style="max-width: 180px; height: auto; margin-bottom: 15px;"
                  crossorigin="anonymous">
-            <h1 style="margin:8px 0 5px; color:#1976d2; font-size:28px;">${storeConfig.businessName}</h1>
-            <p style="margin:0; font-size:15px;">
+            <h1 style="margin: 8px 0 5px; color: #1976d2; font-size: 28px;">${storeConfig.businessName}</h1>
+            <p style="margin: 0; font-size: 15px;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
 
-        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
-            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
-            <div style="text-align:right;">
+        <!-- Invoice Info -->
+        <div style="display: flex; justify-content: space-between; margin: 25px 0; font-size: 15px;">
+            <div>
+                <strong>Factura No:</strong> ${invoiceId}<br>
+                <strong>Fecha:</strong> ${currentDate}
+            </div>
+            <div style="text-align: right;">
                 <strong>Cliente:</strong> ${customer}<br>
                 ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
             </div>
         </div>
 
-        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15px;">
+        <!-- Products Table -->
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px;">
             <thead>
-                <tr style="background:#1976d2; color:white;">
-                    <th style="padding:12px 10px; text-align:left;">Producto</th>
-                    <th style="padding:12px 10px; text-align:center;">Cant.</th>
-                    <th style="padding:12px 10px; text-align:right;">Precio Unit.</th>
-                    <th style="padding:12px 10px; text-align:right;">Total</th>
+                <tr style="background: #1976d2; color: white;">
+                    <th style="padding: 12px 12px; text-align: left;">Producto</th>
+                    <th style="padding: 12px 12px; text-align: center;">Cant.</th>
+                    <th style="padding: 12px 12px; text-align: right;">Precio Unit.</th>
+                    <th style="padding: 12px 12px; text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
 
-        <div style="text-align:right; margin-top:30px; font-size:16px;">
-            <table style="width:100%; max-width:400px; margin-left:auto;">
-                <tr><td style="padding:8px 0; text-align:right;">Subtotal:</td><td style="padding:8px 0; text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
-                <tr><td style="padding:8px 0; text-align:right;">IVA (${ivaRate}%):</td><td style="padding:8px 0; text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
-                <tr style="border-top:3px double #1976d2; font-size:20px; font-weight:bold; color:#1976d2;">
-                    <td style="padding:12px 0; text-align:right;">TOTAL A PAGAR:</td>
-                    <td style="padding:12px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+        <!-- Totals -->
+        <div style="text-align: right; margin-top: 30px; font-size: 16px;">
+            <table style="width: 100%; max-width: 400px; margin-left: auto;">
+                <tr>
+                    <td style="padding: 8px 0; text-align: right;">Subtotal:</td>
+                    <td style="padding: 8px 0; text-align: right;">$${subtotal.toLocaleString('es-CO')}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; text-align: right;">IVA (${ivaRate}%):</td>
+                    <td style="padding: 8px 0; text-align: right;">$${ivaAmount.toLocaleString('es-CO')}</td>
+                </tr>
+                <tr style="border-top: 3px double #1976d2; font-size: 20px; font-weight: bold; color: #1976d2;">
+                    <td style="padding: 12px 0; text-align: right;">TOTAL A PAGAR:</td>
+                    <td style="padding: 12px 0; text-align: right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
 
-        <div style="text-align:center; margin-top:40px; font-size:14px; color:#555;">Gracias por su compra 🛠️ • ¡Vuelva pronto!</div>
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 40px; font-size: 14px; color: #555;">
+            Gracias por su compra 🛠️ • ¡Vuelva pronto!
+        </div>
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
 
+    // Save to Firebase
     db.ref('bills').push({
-        invoiceId, date: Date.now(), total: grandTotal,
-        iva: ivaAmount, subtotal: subtotal,
-        customer, customerId: customerIdVal, items: cart
+        invoiceId, 
+        date: Date.now(), 
+        total: grandTotal,
+        iva: ivaAmount, 
+        subtotal: subtotal,
+        customer, 
+        customerId: customerIdVal, 
+        items: cart
     });
 }
-
 // ================== FIXED PDF DOWNLOAD (Logo should appear now) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
