@@ -588,7 +588,7 @@ async function generateBill() {
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
+            <img src="${logoSrc}" alt="Dinamo Tools Sales & Service" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -674,6 +674,7 @@ function printBill() {
     printWindow.document.write(`
         <html>
         <head>
+            const logoSrc = storeConfig.logoUrl || "https://i.imgur.com/xCbfxgt.png";
             <title>Factura - Dinamo Tools Sales & Service</title>
             <style>
                 @page { size: A4; margin: 15mm; }
