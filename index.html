@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dinamo Tools Sales & Service - POS</title>
     <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -734,31 +736,54 @@ async function generateBill() {
 }
 
 // ================== PDF DOWNLOAD (Improved) ==================
-function downloadPDF() {
-    const element = document.getElementById('bill');
-    if (!element || !element.innerHTML.trim()) {
-        return alert("❌ Please generate the invoice first!");
+async function downloadPDF() {
+    const billEl = document.getElementById('bill');
+    if (!billEl || !billEl.innerHTML.trim()) {
+        return alert("❌ Generate the invoice first!");
     }
 
-    const opt = {
-        margin: [15, 15, 15, 15],
-        filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            letterRendering: true
+    // Extract data from your cart (better than parsing HTML)
+    const docDefinition = {
+        content: [
+            { image: await getLogoBase64(storeConfig.logoUrl), width: 180, alignment: 'center' },
+            { text: storeConfig.businessName, style: 'header', alignment: 'center', margin: [0, 10] },
+            { text: `${storeConfig.address}\nNIT: ${storeConfig.nit}\nTel: ${storeConfig.mobile}`, alignment: 'center', margin: [0, 5] },
+            
+            { text: `Factura No: INV-${Date.now().toString().slice(-8)}`, style: 'subheader', margin: [0, 20, 0, 5] },
+            { text: `Fecha: ${new Date().toLocaleString('es-CO')}`, margin: [0, 0, 0, 20] },
+            
+            {
+                table: {
+                    headerRows: 1,
+                    widths: ['*', 'auto', 'auto', 'auto'],
+                    body: [
+                        ['Producto', 'Cant.', 'Precio Unit.', 'Total'],
+                        ...cart.map(item => [
+                            item.name,
+                            item.qty,
+                            `$${parseFloat(item.price || 0).toLocaleString('es-CO')}`,
+                            `$${(item.qty * item.price).toLocaleString('es-CO')}`
+                        ])
+                    ]
+                },
+                layout: 'lightHorizontalLines'
+            },
+            
+            { text: `Subtotal: $${subtotal.toLocaleString('es-CO')}`, alignment: 'right', margin: [0, 20, 0, 5] },
+            { text: `IVA (${storeConfig.ivaRate}%): $${ivaAmount.toLocaleString('es-CO')}`, alignment: 'right', margin: [0, 5] },
+            { text: `TOTAL: $${grandTotal.toLocaleString('es-CO')}`, style: 'total', alignment: 'right', margin: [0, 15] },
+            
+            { text: 'Gracias por su compra 🛠️', alignment: 'center', margin: [0, 40] }
+        ],
+        styles: {
+            header: { fontSize: 22, bold: true, color: '#1976d2' },
+            subheader: { fontSize: 14, bold: true },
+            total: { fontSize: 18, bold: true, color: '#1976d2' }
         },
-        jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait'
-        }
+        defaultStyle: { fontSize: 12 }
     };
 
-    html2pdf().set(opt).from(element).save()
-        .catch(err => alert("PDF generated with possible logo issue."));
+    pdfMake.createPdf(docDefinition).download(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 // ================== PRINT FUNCTION (Improved) ==================
