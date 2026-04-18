@@ -850,9 +850,9 @@ function printThermalBill() {
                     margin: 0 auto; 
                     padding: 5mm 4mm; 
                     font-size: 13px; 
-                    line-height: 1.35; 
+                    line-height: 1.45; 
                     color: #000; 
-                    background: #fff;
+                    background: white;
                 }
                 .receipt {
                     width: 100%;
@@ -862,71 +862,58 @@ function printThermalBill() {
                 }
                 .header h1 {
                     font-size: 17px;
-                    margin: 5px 0 8px 0;
+                    margin: 8px 0 5px 0;
                     font-weight: bold;
                 }
                 .header p {
-                    margin: 2px 0;
+                    margin: 3px 0;
                     font-size: 12px;
+                }
+                .divider {
+                    border-top: 1px dashed #000;
+                    margin: 12px 0 8px 0;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 12px 0;
+                    margin: 10px 0;
                     font-size: 13px;
                 }
                 th {
                     border-bottom: 1px dashed #000;
-                    padding-bottom: 6px;
+                    padding: 6px 0 4px 0;
                     text-align: left;
                     font-weight: bold;
                 }
                 td {
-                    padding: 5px 3px;
+                    padding: 6px 2px;
                     vertical-align: top;
                 }
-                .item-name {
-                    width: 50%;
-                    word-break: break-word;
-                }
-                .qty {
-                    width: 12%;
-                    text-align: center;
-                }
-                .price {
-                    width: 19%;
-                    text-align: right;
-                }
-                .amount {
-                    width: 19%;
-                    text-align: right;
-                }
+                .item-name { width: 50%; word-break: break-word; }
+                .qty       { width: 10%; text-align: center; }
+                .price     { width: 20%; text-align: right; }
+                .amount    { width: 20%; text-align: right; }
+
                 .totals {
                     margin-top: 15px;
-                    border-top: 1px dashed #000;
-                    padding-top: 8px;
                 }
                 .total-line {
                     display: flex;
                     justify-content: space-between;
-                    margin: 4px 0;
+                    margin: 5px 0;
                 }
                 .grand-total {
                     font-size: 16px;
                     font-weight: bold;
                     border-top: 2px solid #000;
-                    padding-top: 8px;
+                    padding-top: 10px;
                     margin-top: 8px;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 20px;
+                    margin-top: 25px;
                     font-size: 12px;
-                    line-height: 1.4;
-                }
-                .divider {
-                    border-top: 1px dashed #000;
-                    margin: 12px 0;
+                    line-height: 1.5;
                 }
             </style>
         </head>
