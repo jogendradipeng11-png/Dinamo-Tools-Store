@@ -646,7 +646,9 @@ async function generateBill() {
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" crossorigin="anonymous" loading="eager"       style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"       alt="Dinamo Tools Sales & Service">
+            <img src="${logoSrc}" crossorigin="anonymous" loading="eager" 
+     style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;" 
+     alt="Dinamo Tools Sales & Service">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -726,40 +728,30 @@ async function downloadPDF() {
         return alert("❌ Please generate the invoice first!");
     }
 
-    window.scrollTo(0, 0);
-
     try {
-        // Wait longer for logo and rendering
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 1500));
 
         const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
             letterRendering: true,
-            scrollY: 0,
             scrollX: 0,
-            logging: false
+            scrollY: 0
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        });
+        const pdf = new jsPDF('p', 'mm', 'a4');
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
-
-        console.log("✅ PDF generated with jsPDF + html2canvas");
     } catch (err) {
         console.error(err);
-        alert("❌ PDF generation failed. Try Print Invoice instead.");
+        alert("❌ Still failed. Use Print Invoice.");
     }
 }
 function PrintInvoice() {
