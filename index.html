@@ -645,7 +645,7 @@ async function generateBill() {
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" crossorigin="anonymous" alt="Dinamo Tools" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
+            <img src="${logoSrc}" crossorigin="anonymous" loading="eager"       style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"       alt="Dinamo Tools Sales & Service">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -727,7 +727,6 @@ async function downloadPDF() {
         return alert("❌ Please generate the invoice first!");
     }
 
-    // Force scroll to top and give enough time for image + styles to load
     window.scrollTo(0, 0);
 
     const opt = {
@@ -735,11 +734,13 @@ async function downloadPDF() {
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
+            scale: 2,
+            useCORS: true,
             allowTaint: true,
             letterRendering: true,
-            logging: false   // keep false, change to true only if debugging
+            logging: false,
+            scrollY: 0,           // Important fix for blank/offset issues
+            scrollX: 0
         },
         jsPDF: { 
             unit: 'mm', 
@@ -749,16 +750,28 @@ async function downloadPDF() {
     };
 
     try {
-        // Increased delay — this is the key fix for blank PDF with dynamic content + external logo
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Longer delay + force image load check
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
+        // Extra safety: preload the logo
+        const logoImg = pdfElement.querySelector('img');
+        if (logoImg && logoImg.src) {
+            await new Promise((resolve) => {
+                if (logoImg.complete) resolve();
+                else {
+                    logoImg.onload = resolve;
+                    logoImg.onerror = resolve; // continue even if logo fails
+                }
+            });
+        }
 
         await html2pdf().set(opt).from(pdfElement).save();
         
-        console.log("✅ PDF downloaded successfully!");
+        console.log("✅ PDF generated successfully!");
 
     } catch (err) {
         console.error("PDF Error:", err);
-        alert("❌ Failed to generate PDF.\n\nTry again or use 'Print Invoice' button.");
+        alert("❌ Failed to generate PDF.\n\nTry 'Print Invoice' as a workaround.");
     }
 }
 function PrintInvoice() {
