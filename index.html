@@ -723,24 +723,23 @@ document.getElementById('pdfContainer').innerHTML = billHTML;  // for PDF only
 async function downloadPDF() {
     const pdfElement = document.getElementById('pdfContainer');
    
-    // Check if invoice was generated
     if (!pdfElement || !pdfElement.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    // Scroll to top and give time for rendering
+    // Force scroll to top and give enough time for image + styles to load
     window.scrollTo(0, 0);
 
     const opt = {
-        margin: [25, 20, 25, 20],
+        margin: [20, 15, 20, 15],
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,               // Good sharpness
-            useCORS: true,          // Important for external logo
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
             allowTaint: true,
-            letterRendering: true,  // Better text quality
-            logging: false
+            letterRendering: true,
+            logging: false   // keep false, change to true only if debugging
         },
         jsPDF: { 
             unit: 'mm', 
@@ -750,8 +749,8 @@ async function downloadPDF() {
     };
 
     try {
-        // This delay is crucial to fix blank PDF issue
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Increased delay — this is the key fix for blank PDF with dynamic content + external logo
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         await html2pdf().set(opt).from(pdfElement).save();
         
@@ -759,10 +758,9 @@ async function downloadPDF() {
 
     } catch (err) {
         console.error("PDF Error:", err);
-        alert("❌ Failed to generate PDF.\n\nPlease try again or use 'Print Invoice' button.");
+        alert("❌ Failed to generate PDF.\n\nTry again or use 'Print Invoice' button.");
     }
 }
-
 function PrintInvoice() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
