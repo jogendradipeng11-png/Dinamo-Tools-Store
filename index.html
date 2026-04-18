@@ -417,11 +417,83 @@ function scanForAddToBill() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// ================== IMPROVED SCAN TO EDIT PRODUCT ==================
+
 function scanForEdit() {
     scanMode = 'editProduct';
-    document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to edit product";
-    window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
+    
+    const statusEl = document.getElementById('scannerStatus');
+    statusEl.style.color = "#ff9800";
+    statusEl.textContent = "📱 Point camera at product barcode/QR to EDIT";
+
+    // Scroll to scanner area
+    window.scrollTo({ 
+        top: 0, 
+        behavior: "smooth" 
+    });
+
+    // Make sure scanner is active
+    if (!html5QrCode || html5QrCode.isScanning === false) {
+        setTimeout(() => {
+            initScanner().catch(() => {
+                alert("❌ Could not start camera.\nPlease click 'Start / Retry Camera' button.");
+            });
+        }, 300);
+    }
+}
+
+function handleScannedCode(decodedText) {
+    const code = decodedText.trim();
+    const statusEl = document.getElementById('scannerStatus');
+
+    if (html5QrCode) html5QrCode.pause(true);
+
+    if (scanMode === 'addToBill') {
+        const product = products.find(p => p.code === code);
+        if (product) {
+            addToCart(product);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Added: ${product.name}`;
+        } else {
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = `❌ Product not found: ${code}`;
+        }
+    }
+    else if (scanMode === 'editProduct') {
+        const product = products.find(p => p.code === code);
+        if (product) {
+            editProduct(code);           // ← This fills the form
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Loaded for editing: ${product.name}`;
+            
+            // Auto-scroll to the "Add / Update Product" section so staff can see the form
+            setTimeout(() => {
+                const addSection = document.querySelector('.card:nth-child(2)'); // 2nd card = Add/Update Product
+                if (addSection) {
+                    addSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }, 800);
+        } else {
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = `❌ Product not found for code: ${code}`;
+        }
+    }
+    else {
+        // Default: just put code in add product field
+        document.getElementById('pcode').value = code;
+        statusEl.style.color = "#2e7d32";
+        statusEl.textContent = `✅ Scanned Code: ${code}`;
+    }
+
+    // Reset mode after scan
+    scanMode = 'addProduct';
+
+    // Resume scanner after a short delay
+    if (html5QrCode) {
+        setTimeout(() => {
+            html5QrCode.resume().catch(() => {});
+        }, 1200);
+    }
 }
 
 // ================== BILLING & CART ==================
