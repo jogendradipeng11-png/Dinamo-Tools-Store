@@ -203,6 +203,10 @@
     <div class="card">
         <h3>📄 Sales Invoice</h3>
         <div id="bill"></div>
+        <!-- NEW: Hidden container ONLY for PDF generation -->
+<div id="pdfContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; padding: 30px; border: 5px solid #1976d2; border-radius: 15px; font-family: 'Segoe UI', Arial, sans-serif;">
+    <!-- The full invoice HTML will be placed here temporarily -->
+</div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
             <button onclick="downloadPDF()" style="padding:12px 20px;">⬇️ Download PDF</button>
             <button onclick="PrintInvoice()" style="padding:12px 20px;">🖨️ Print Invoice</button>
@@ -686,6 +690,8 @@ async function generateBill() {
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
+    // ADD THIS LINE:
+document.getElementById('pdfContainer').innerHTML = billHTML;  // for PDF only
 
     // Save for restore
     lastInvoiceCart = [...cart];
@@ -715,23 +721,45 @@ async function generateBill() {
 
 // ================== PRINT & DOWNLOAD ==================
 async function downloadPDF() {
-    const element = document.getElementById('bill');
-    if (!element || !element.innerHTML.trim()) {
+    const pdfElement = document.getElementById('pdfContainer');
+   
+    // Check if invoice was generated
+    if (!pdfElement || !pdfElement.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
+    // Scroll to top and give time for rendering
+    window.scrollTo(0, 0);
+
     const opt = {
-        margin: [20, 15, 20, 15],
+        margin: [25, 20, 25, 20],
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: {
+            scale: 2,               // Good sharpness
+            useCORS: true,          // Important for external logo
+            allowTaint: true,
+            letterRendering: true,  // Better text quality
+            logging: false
+        },
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait' 
+        }
     };
 
     try {
-        await html2pdf().set(opt).from(element).save();
+        // This delay is crucial to fix blank PDF issue
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        await html2pdf().set(opt).from(pdfElement).save();
+        
+        console.log("✅ PDF downloaded successfully!");
+
     } catch (err) {
-        alert("❌ Failed to generate PDF.");
+        console.error("PDF Error:", err);
+        alert("❌ Failed to generate PDF.\n\nPlease try again or use 'Print Invoice' button.");
     }
 }
 
