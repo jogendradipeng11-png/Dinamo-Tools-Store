@@ -827,112 +827,205 @@ function PrintInvoice() {
 }
 
 function printThermalBill() {
-    const bill = document.getElementById('bill');
-    if (!bill || !bill.innerHTML.trim()) {
+    const billElement = document.getElementById('bill');
+    if (!billElement || !billElement.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    const thermalWindow = window.open('', '_blank');
+    // Extract data from the generated bill (more reliable than parsing HTML)
+    const invoiceId = document.querySelector('#bill strong') ? 
+                      Array.from(document.querySelectorAll('#bill strong'))
+                           .find(el => el.textContent.includes('Factura No'))?.nextSibling?.textContent?.trim() || 'INV-XXXXXX' : 'INV-XXXXXX';
 
-    thermalWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Factura - Dinamo Tools</title>
-            <style>
-                @page { 
-                    size: 80mm auto; 
-                    margin: 0; 
-                }
-                body { 
-                    font-family: monospace; 
-                    width: 72mm; 
-                    margin: 0 auto; 
-                    padding: 5mm 4mm; 
-                    font-size: 13px; 
-                    line-height: 1.45; 
-                    color: #000; 
-                    background: white;
-                }
-                .receipt {
-                    width: 100%;
-                }
-                .centered {
-                    text-align: center;
-                }
-                .header h1 {
-                    font-size: 17px;
-                    margin: 8px 0 5px 0;
-                    font-weight: bold;
-                }
-                .header p {
-                    margin: 3px 0;
-                    font-size: 12px;
-                }
-                .divider {
-                    border-top: 1px dashed #000;
-                    margin: 12px 0 8px 0;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 10px 0;
-                    font-size: 13px;
-                }
-                th {
-                    border-bottom: 1px dashed #000;
-                    padding: 6px 0 4px 0;
-                    text-align: left;
-                    font-weight: bold;
-                }
-                td {
-                    padding: 6px 2px;
-                    vertical-align: top;
-                }
-                .item-name { width: 20%; word-break: break-word; }
-                .qty       { width: 10%; text-align: center; }
-                .price     { width: 10%; text-align: right; }
-                .amount    { width: 10%; text-align: right; }
+    const dateText = document.querySelector('#bill strong') ? 
+                     Array.from(document.querySelectorAll('#bill strong'))
+                          .find(el => el.textContent.includes('Fecha'))?.nextSibling?.textContent?.trim() || '' : '';
 
-                .totals {
-                    margin-top: 15px;
-                }
-                .total-line {
-                    display: flex;
-                    justify-content: space-between;
-                    margin: 5px 0;
-                }
-                .grand-total {
-                    font-size: 10px;
-                    font-weight: bold;
-                    border-top: 2px solid #000;
-                    padding-top: 5px;
-                    margin-top: 8px;
-                }
-                .footer {
-                    text-align: center;
-                    margin-top: 25px;
-                    font-size: 12px;
-                    line-height: 1.5;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="receipt">
-                ${bill.innerHTML}
+    // Get customer info
+    const customerEl = document.querySelector('#bill strong') ? 
+                       Array.from(document.querySelectorAll('#bill strong'))
+                            .find(el => el.textContent.includes('Cliente')) : null;
+    const customerName = customerEl ? customerEl.nextSibling?.textContent?.trim() || 'Cliente General' : 'Cliente General';
+
+    // Build clean thermal receipt
+    let itemsHTML = '';
+    cart.length > 0 ? cart.forEach(item => {   // Use last cart data if available, fallback to bill
+        const amount = item.qty * (item.price || 0);
+        itemsHTML += `
+            <tr>
+                <td class="item-name">${item.name}</td>
+                <td class="qty">${item.qty}</td>
+                <td class="price">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td class="amount">$${amount.toLocaleString('es-CO')}</td>
+            </tr>`;
+    }) : '';
+
+    // Calculate totals from current cart or last invoice
+    let subtotal = 0;
+    if (cart.length > 0) {
+        subtotal = cart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
+    } else {
+        // Fallback: try to parse from bill (less accurate)
+        subtotal = 0; // You can improve this later
+    }
+    const ivaRate = storeConfig.ivaRate || 19;
+    const ivaAmount = subtotal * (ivaRate / 100);
+    const grandTotal = subtotal + ivaAmount;
+
+    const thermalHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Factura - Dinamo Tools</title>
+        <style>
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+            body {
+                font-family: monospace;
+                width: 72mm;
+                margin: 0 auto;
+                padding: 4mm 3mm;
+                font-size: 13px;
+                line-height: 1.4;
+                color: #000;
+                background: white;
+            }
+            .receipt {
+                width: 100%;
+            }
+            .centered {
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 18px;
+                margin: 6px 0 4px 0;
+                font-weight: bold;
+            }
+            .header p {
+                margin: 2px 0;
+                font-size: 12px;
+            }
+            .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0 8px 0;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 8px 0;
+            }
+            th {
+                border-bottom: 1px dashed #000;
+                padding: 4px 0 6px 0;
+                text-align: left;
+                font-weight: bold;
+            }
+            td {
+                padding: 4px 2px;
+                vertical-align: top;
+            }
+            .item-name { width: 48%; word-break: break-word; }
+            .qty { width: 12%; text-align: center; }
+            .price { width: 18%; text-align: right; }
+            .amount { width: 22%; text-align: right; }
+            .totals {
+                margin-top: 12px;
+            }
+            .total-line {
+                display: flex;
+                justify-content: space-between;
+                margin: 3px 0;
+                font-size: 13.5px;
+            }
+            .grand-total {
+                font-size: 15px;
+                font-weight: bold;
+                border-top: 2px solid #000;
+                padding-top: 6px;
+                margin-top: 8px;
+            }
+            .footer {
+                text-align: center;
+                margin-top: 25px;
+                font-size: 11.5px;
+                line-height: 1.4;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="receipt">
+            <div class="header centered">
+                <h1>${storeConfig.businessName}</h1>
+                <p>${storeConfig.address}</p>
+                <p>NIT: ${storeConfig.nit}</p>
+                <p>Tel: ${storeConfig.mobile}</p>
+                <p>${storeConfig.city}</p>
             </div>
 
-            <script>
-                window.onload = function() {
-                    setTimeout(() => {
-                        window.print();
-                    }, 700);
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
+            <div class="divider"></div>
 
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+                <div><strong>Factura No:</strong> ${invoiceId}</div>
+                <div style="text-align:right;">${dateText || new Date().toLocaleDateString('es-CO')}</div>
+            </div>
+            <div><strong>Cliente:</strong> ${customerName}</div>
+
+            <div class="divider"></div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHTML || '<tr><td colspan="4" style="text-align:center; padding:10px;">No items</td></tr>'}
+                </tbody>
+            </table>
+
+            <div class="divider"></div>
+
+            <div class="totals">
+                <div class="total-line">
+                    <span>Subtotal:</span>
+                    <span>$${subtotal.toLocaleString('es-CO')}</span>
+                </div>
+                <div class="total-line">
+                    <span>IVA (${ivaRate}%):</span>
+                    <span>$${ivaAmount.toLocaleString('es-CO')}</span>
+                </div>
+                <div class="total-line grand-total">
+                    <span>TOTAL A PAGAR</span>
+                    <span>$${grandTotal.toLocaleString('es-CO')}</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="footer">
+                Gracias por su compra 🛠️<br>
+                ¡Vuelva pronto a ${storeConfig.businessName}!
+            </div>
+        </div>
+
+        <script>
+            window.onload = function() {
+                setTimeout(() => {
+                    window.print();
+                    // Optional: window.close(); after printing (uncomment if desired)
+                }, 800);
+            };
+        <\/script>
+    </body>
+    </html>`;
+
+    const thermalWindow = window.open('', '_blank');
+    thermalWindow.document.write(thermalHTML);
     thermalWindow.document.close();
 }
 
