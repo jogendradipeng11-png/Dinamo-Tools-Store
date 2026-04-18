@@ -735,78 +735,77 @@ async function generateBill() {
     });
 }
 
-// ================== PDF DOWNLOAD (Improved) ==================
-// ================== FIXED & IMPROVED DOWNLOAD PDF ==================
+// ================== CORRECT & VERIFIED DOWNLOAD PDF FUNCTION ==================
 async function downloadPDF() {
     if (cart.length === 0) {
-        return alert("❌ Cart is empty! Please generate the invoice first.");
+        return alert("❌ El carrito está vacío. Genera la factura primero.");
     }
 
-    const subtotal = cart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
-    const ivaRate = storeConfig.ivaRate || 19;
+    const subtotal = cart.reduce((sum, item) => sum + (item.qty * (parseFloat(item.price) || 0)), 0);
+    const ivaRate = parseFloat(storeConfig.ivaRate) || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
 
     try {
-        // Get logo as base64 (very important for pdfMake)
-        let logoBase64 = await getLogoBase64(storeConfig.logoUrl);
+        // Convert logo to base64 (critical for pdfMake)
+        const logoBase64 = await getLogoBase64(storeConfig.logoUrl);
 
         const docDefinition = {
             pageSize: 'A4',
             pageMargins: [40, 60, 40, 60],
             content: [
-                // Header with Logo
+                // Logo
                 {
                     image: logoBase64,
                     width: 160,
                     alignment: 'center',
                     margin: [0, 0, 0, 15]
                 },
+                // Business Name
                 {
                     text: storeConfig.businessName || "Dinamo Tools Sales & Service",
                     style: 'header'
                 },
+                // Business Details
                 {
-                    text: [
-                        `${storeConfig.address || ''}\n`,
-                        `NIT: ${storeConfig.nit || ''} | Tel: ${storeConfig.mobile || ''}\n`,
-                        `${storeConfig.city || ''} • ${storeConfig.email || ''}`
-                    ],
+                    text: `${storeConfig.address || ''}\nNIT: ${storeConfig.nit || ''} | Tel: ${storeConfig.mobile || ''}\n${storeConfig.city || ''} • ${storeConfig.email || ''}`,
                     alignment: 'center',
                     fontSize: 11,
                     margin: [0, 5, 0, 25]
                 },
 
-                // Invoice Info
+                // Invoice & Customer Info
                 {
                     columns: [
                         {
                             width: '50%',
                             text: [
                                 { text: 'Factura No: ', bold: true },
-                                invoiceId + '\n',
+                                { text: invoiceId + '\n' },
                                 { text: 'Fecha: ', bold: true },
                                 new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })
                             ],
-                            fontSize: 12
+                            fontSize: 12,
+                            lineHeight: 1.3
                         },
                         {
                             width: '50%',
                             text: [
                                 { text: 'Cliente: ', bold: true },
-                                (document.getElementById('customerName').value.trim() || "Cliente General") + '\n',
+                                (document.getElementById('customerName').value.trim() || "Cliente General"),
                                 document.getElementById('customerId').value.trim() ? 
-                                [{ text: 'NIT/CC: ', bold: true }, document.getElementById('customerId').value.trim()] : ''
+                                ['\n', { text: 'NIT/CC: ', bold: true }, document.getElementById('customerId').value.trim()] : ''
                             ],
                             alignment: 'right',
-                            fontSize: 12
+                            fontSize: 12,
+                            lineHeight: 1.3
                         }
                     ],
                     margin: [0, 10, 0, 20]
                 },
 
-                // Items Table
+                // Products Table
                 {
                     table: {
                         headerRows: 1,
@@ -819,49 +818,56 @@ async function downloadPDF() {
                                 { text: 'Total', style: 'tableHeader', alignment: 'right' }
                             ],
                             ...cart.map(item => [
-                                item.name || 'Unnamed Product',
-                                { text: item.qty, alignment: 'center' },
+                                item.name || 'Producto sin nombre',
+                                { text: item.qty.toString(), alignment: 'center' },
                                 { text: '$' + parseFloat(item.price || 0).toLocaleString('es-CO'), alignment: 'right' },
-                                { text: '$' + (item.qty * (item.price || 0)).toLocaleString('es-CO'), alignment: 'right', bold: true }
+                                { text: '$' + (item.qty * parseFloat(item.price || 0)).toLocaleString('es-CO'), alignment: 'right', bold: true }
                             ])
                         ]
                     },
                     layout: {
-                        hLineWidth: (i, node) => (i === 0 || i === 1) ? 1 : 0.5,
+                        hLineColor: '#1976d2',
+                        vLineColor: '#1976d2',
+                        hLineWidth: (i) => (i === 0 || i === 1) ? 1.5 : 0.5,
                         vLineWidth: () => 0.5,
-                        hLineColor: () => '#1976d2',
                         paddingLeft: () => 8,
                         paddingRight: () => 8,
                         paddingTop: () => 8,
                         paddingBottom: () => 8
                     },
-                    margin: [0, 10, 0, 20]
+                    margin: [0, 10, 0, 25]
                 },
 
-                // Totals
+                // Totals Section
                 {
                     table: {
                         widths: ['*', 'auto'],
                         body: [
-                            [{ text: 'Subtotal:', alignment: 'right', bold: true }, 
-                             '$' + subtotal.toLocaleString('es-CO')],
-                            [{ text: `IVA (${ivaRate}%):`, alignment: 'right', bold: true }, 
-                             '$' + ivaAmount.toLocaleString('es-CO')],
-                            [{ text: 'TOTAL A PAGAR:', alignment: 'right', fontSize: 16, bold: true, color: '#1976d2' }, 
-                             { text: '$' + grandTotal.toLocaleString('es-CO'), fontSize: 16, bold: true, color: '#1976d2' }]
+                            [
+                                { text: 'Subtotal:', alignment: 'right', bold: true },
+                                '$' + subtotal.toLocaleString('es-CO')
+                            ],
+                            [
+                                { text: `IVA (${ivaRate}%):`, alignment: 'right', bold: true },
+                                '$' + ivaAmount.toLocaleString('es-CO')
+                            ],
+                            [
+                                { text: 'TOTAL A PAGAR:', alignment: 'right', fontSize: 16, bold: true, color: '#1976d2' },
+                                { text: '$' + grandTotal.toLocaleString('es-CO'), fontSize: 16, bold: true, color: '#1976d2' }
+                            ]
                         ]
                     },
                     layout: 'noBorders',
-                    margin: [0, 20, 0, 10]
+                    margin: [0, 10, 0, 30]
                 },
 
-                // Footer
+                // Footer Message
                 {
-                    text: '\n\nGracias por su compra 🛠️\n¡Vuelva pronto a Dinamo Tools Sales & Service!',
+                    text: "Gracias por su compra 🛠️\n¡Vuelva pronto a Dinamo Tools Sales & Service!",
                     alignment: 'center',
                     fontSize: 12,
                     color: '#555',
-                    margin: [0, 30, 0, 0]
+                    margin: [0, 20, 0, 0]
                 }
             ],
             styles: {
@@ -870,13 +876,14 @@ async function downloadPDF() {
                     bold: true,
                     color: '#1976d2',
                     alignment: 'center',
-                    margin: [0, 10, 0, 5]
+                    margin: [0, 10, 0, 8]
                 },
                 tableHeader: {
                     bold: true,
                     fontSize: 13,
                     color: 'white',
-                    fillColor: '#1976d2'
+                    fillColor: '#1976d2',
+                    alignment: 'center'
                 }
             },
             defaultStyle: {
@@ -884,12 +891,14 @@ async function downloadPDF() {
             }
         };
 
-        // Generate and download PDF
-        pdfMake.createPdf(docDefinition).download(`Factura_${invoiceId}.pdf`);
+        // Download the PDF
+        pdfMake.createPdf(docDefinition).download(`Factura_DinamoTools_${invoiceId}.pdf`);
+
+        console.log("✅ PDF generated successfully");
 
     } catch (error) {
-        console.error("PDF Generation Error:", error);
-        alert("❌ Error generating PDF. Please try again.\n\n" + error.message);
+        console.error("PDF Error:", error);
+        alert("❌ Error al generar el PDF:\n" + error.message + "\n\nPor favor verifica la URL del logo y vuelve a intentar.");
     }
 }
 // ================== PRINT FUNCTION (Improved) ==================
