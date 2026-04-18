@@ -737,53 +737,100 @@ async function generateBill() {
 
 // ================== PDF DOWNLOAD (Improved) ==================
 async function downloadPDF() {
-    const billEl = document.getElementById('bill');
-    if (!billEl || !billEl.innerHTML.trim()) {
-        return alert("❌ Generate the invoice first!");
+    if (cart.length === 0) {
+        return alert("Cart is empty! Generate invoice first.");
     }
 
-    // Extract data from your cart (better than parsing HTML)
+    // Calculate totals (reuse your logic from generateBill)
+    let subtotal = 0;
+    cart.forEach(item => {
+        subtotal += item.qty * (item.price || 0);
+    });
+    const ivaRate = storeConfig.ivaRate || 19;
+    const ivaAmount = subtotal * (ivaRate / 100);
+    const grandTotal = subtotal + ivaAmount;
+
     const docDefinition = {
         content: [
-            { image: await getLogoBase64(storeConfig.logoUrl), width: 180, alignment: 'center' },
-            { text: storeConfig.businessName, style: 'header', alignment: 'center', margin: [0, 10] },
-            { text: `${storeConfig.address}\nNIT: ${storeConfig.nit}\nTel: ${storeConfig.mobile}`, alignment: 'center', margin: [0, 5] },
-            
-            { text: `Factura No: INV-${Date.now().toString().slice(-8)}`, style: 'subheader', margin: [0, 20, 0, 5] },
-            { text: `Fecha: ${new Date().toLocaleString('es-CO')}`, margin: [0, 0, 0, 20] },
-            
+            // Logo
+            { 
+                image: await getLogoBase64(storeConfig.logoUrl), 
+                width: 180, 
+                alignment: 'center',
+                margin: [0, 0, 0, 15]
+            },
+            { 
+                text: storeConfig.businessName, 
+                style: 'header', 
+                alignment: 'center' 
+            },
+            { 
+                text: `${storeConfig.address} | NIT: ${storeConfig.nit}\nTel: ${storeConfig.mobile} | ${storeConfig.email}`, 
+                alignment: 'center', 
+                fontSize: 11,
+                margin: [0, 5, 0, 20]
+            },
+
+            { text: `Factura No: INV-${Date.now().toString().slice(-8)}`, style: 'subheader', margin: [0, 10, 0, 5] },
+            { text: `Fecha: ${new Date().toLocaleString('es-CO')}`, margin: [0, 0, 0, 15] },
+
             {
                 table: {
                     headerRows: 1,
                     widths: ['*', 'auto', 'auto', 'auto'],
                     body: [
-                        ['Producto', 'Cant.', 'Precio Unit.', 'Total'],
+                        ['Producto', 'Cantidad', 'Precio Unit.', 'Total'],
                         ...cart.map(item => [
                             item.name,
-                            item.qty,
+                            item.qty.toString(),
                             `$${parseFloat(item.price || 0).toLocaleString('es-CO')}`,
-                            `$${(item.qty * item.price).toLocaleString('es-CO')}`
+                            `$${(item.qty * (item.price || 0)).toLocaleString('es-CO')}`
                         ])
                     ]
                 },
-                layout: 'lightHorizontalLines'
+                layout: 'lightHorizontalLines',
+                margin: [0, 10, 0, 20]
             },
-            
-            { text: `Subtotal: $${subtotal.toLocaleString('es-CO')}`, alignment: 'right', margin: [0, 20, 0, 5] },
-            { text: `IVA (${storeConfig.ivaRate}%): $${ivaAmount.toLocaleString('es-CO')}`, alignment: 'right', margin: [0, 5] },
-            { text: `TOTAL: $${grandTotal.toLocaleString('es-CO')}`, style: 'total', alignment: 'right', margin: [0, 15] },
-            
-            { text: 'Gracias por su compra 🛠️', alignment: 'center', margin: [0, 40] }
+
+            {
+                columns: [
+                    { width: '*', text: '' },
+                    {
+                        width: 'auto',
+                        table: {
+                            body: [
+                                ['Subtotal:', `$${subtotal.toLocaleString('es-CO')}`],
+                                [`IVA (${ivaRate}%):`, `$${ivaAmount.toLocaleString('es-CO')}`],
+                                [{ text: 'TOTAL A PAGAR', bold: true, fontSize: 14 }, 
+                                 { text: `$${grandTotal.toLocaleString('es-CO')}`, bold: true, fontSize: 14, color: '#1976d2' }]
+                            ]
+                        },
+                        alignment: 'right'
+                    }
+                ]
+            },
+
+            { 
+                text: '\n\nGracias por su compra en Dinamo Tools Sales & Service 🛠️\n¡Vuelva pronto!', 
+                alignment: 'center', 
+                fontSize: 12, 
+                margin: [0, 40, 0, 0],
+                color: '#555'
+            }
         ],
         styles: {
-            header: { fontSize: 22, bold: true, color: '#1976d2' },
-            subheader: { fontSize: 14, bold: true },
-            total: { fontSize: 18, bold: true, color: '#1976d2' }
+            header: { fontSize: 24, bold: true, color: '#1976d2', margin: [0, 0, 0, 10] },
+            subheader: { fontSize: 14, bold: true }
         },
-        defaultStyle: { fontSize: 12 }
+        defaultStyle: { fontSize: 11 }
     };
 
-    pdfMake.createPdf(docDefinition).download(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
+    try {
+        pdfMake.createPdf(docDefinition).download(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (err) {
+        console.error(err);
+        alert("Error generating PDF with pdfmake");
+    }
 }
 
 // ================== PRINT FUNCTION (Improved) ==================
