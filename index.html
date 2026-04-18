@@ -725,56 +725,79 @@ async function generateBill() {
 }
 
 async function downloadPDF() {
-    const element = document.getElementById('pdfContainer');
+    const billElement = document.getElementById('bill');
     
-    if (!element || !element.innerHTML.trim()) {
+    if (!billElement || !billElement.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    const loadingAlert = alert("⏳ Generating PDF... Please wait.");
-
     try {
-        // Optimized html2canvas options for better quality + performance
-        const canvas = await html2canvas(element, {
-            scale: 2.8,                    // Higher scale = sharper text & details (balanced)
-            useCORS: false,                // Safe since logo is commented out
-            allowTaint: true,
-            backgroundColor: "#ffffff",
-            logging: false,                // Disable console spam
-            width: element.offsetWidth,    // Prevent layout shift
-            height: element.offsetHeight,
-            scrollX: 0,
-            scrollY: 0,
-            imageTimeout: 0,               // No timeout for images
-            removeContainer: true          // Clean up after rendering
-        });
+        // Open a clean print window with the invoice
+        const printWindow = window.open('', '_blank');
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Factura - Dinamo Tools</title>
+                <style>
+                    @page { 
+                        size: A4; 
+                        margin: 15mm; 
+                    }
+                    body { 
+                        font-family: 'Segoe UI', Arial, sans-serif; 
+                        padding: 20px; 
+                        margin: 0;
+                    }
+                    img { 
+                        max-height: 110px; 
+                        display: block; 
+                        margin: 0 auto 15px; 
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin: 20px 0; 
+                    }
+                    th, td { 
+                        padding: 12px 10px; 
+                        border: 1px solid #ddd; 
+                        text-align: left; 
+                    }
+                    th { 
+                        background: #1976d2; 
+                        color: white; 
+                    }
+                    .total-row { 
+                        font-size: 22px; 
+                        font-weight: bold; 
+                        color: #1976d2; 
+                    }
+                </style>
+            </head>
+            <body>
+                ${billElement.innerHTML}
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                            // Optional: close window automatically after printing
+                            // setTimeout(() => window.close(), 1500);
+                        }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
 
-        // High-quality image data
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        printWindow.document.close();
 
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
-            compress: true                 // Reduce PDF file size
-        });
-
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-        // Add image with proper scaling
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, '', 'FAST');
-
-        // Save with clean filename
-        const fileName = `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}_${Date.now().toString().slice(-6)}.pdf`;
-        pdf.save(fileName);
-
-        alert("✅ PDF downloaded successfully!\n\nFile saved with high quality.");
+        alert("✅ Print window opened!\n\nChoose 'Save as PDF' in the print dialog for best results.");
 
     } catch (err) {
-        console.error("PDF Generation Error:", err);
-        alert("❌ PDF generation failed.\n\nPlease try:\n1. 'Print Invoice' button\n2. Refresh page and generate invoice again.");
+        console.error(err);
+        alert("❌ Something went wrong. Try the 'Print Invoice' button instead.");
     }
 }
 function PrintInvoice() {
