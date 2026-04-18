@@ -828,23 +828,117 @@ function PrintInvoice() {
 
 function printThermalBill() {
     const bill = document.getElementById('bill');
-    if (!bill.innerHTML.trim()) return alert("❌ Generate invoice first!");
+    if (!bill || !bill.innerHTML.trim()) {
+        return alert("❌ Please generate the invoice first!");
+    }
 
     const thermalWindow = window.open('', '_blank');
+
     thermalWindow.document.write(`
+        <!DOCTYPE html>
         <html>
         <head>
+            <title>Factura Thermal - Dinamo Tools</title>
             <style>
-                body { font-family: monospace; width: 80mm; margin: 0 auto; padding: 10px; font-size: 12px; }
-                h1, h2, p { text-align: center; margin: 4px 0; }
-                table { width: 100%; }
+                @page { 
+                    size: 80mm auto; 
+                    margin: 0; 
+                }
+                body { 
+                    font-family: 'Segoe UI', Arial, monospace; 
+                    width: 80mm; 
+                    margin: 0 auto; 
+                    padding: 8mm 5mm; 
+                    font-size: 12px; 
+                    line-height: 1.4; 
+                    color: #000; 
+                    background: #fff;
+                }
+                .header { 
+                    text-align: center; 
+                    margin-bottom: 10px; 
+                }
+                .header h1 { 
+                    font-size: 16px; 
+                    margin: 4px 0; 
+                    font-weight: bold; 
+                }
+                .header p { 
+                    margin: 3px 0; 
+                    font-size: 11px; 
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 12px 0; 
+                    font-size: 12px; 
+                }
+                th, td { 
+                    padding: 4px 6px; 
+                    text-align: left; 
+                    vertical-align: top; 
+                }
+                th { 
+                    border-bottom: 1px dashed #000; 
+                    font-weight: bold; 
+                }
+                .item-name { 
+                    width: 55%; 
+                    word-break: break-word; 
+                }
+                .qty { 
+                    width: 12%; 
+                    text-align: center; 
+                }
+                .price, .amount { 
+                    width: 16%; 
+                    text-align: right; 
+                }
+                .totals { 
+                    margin-top: 15px; 
+                    border-top: 1px dashed #000; 
+                    padding-top: 8px; 
+                }
+                .total-line { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin: 4px 0; 
+                    font-size: 12px; 
+                }
+                .grand-total { 
+                    font-size: 15px; 
+                    font-weight: bold; 
+                    border-top: 2px solid #000; 
+                    padding-top: 8px; 
+                    margin-top: 8px; 
+                }
+                .footer { 
+                    text-align: center; 
+                    margin-top: 20px; 
+                    font-size: 11px; 
+                }
+                .centered { 
+                    text-align: center; 
+                }
             </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 500);">
+        <body>
             ${bill.innerHTML}
+            
+            <script>
+                // Auto print after load
+                window.onload = function() {
+                    setTimeout(() => {
+                        window.print();
+                        // Optional: close after printing (uncomment if needed)
+                        // setTimeout(() => window.close(), 800);
+                    }, 600);
+                };
+            <\/script>
         </body>
         </html>
     `);
+
     thermalWindow.document.close();
 }
 
