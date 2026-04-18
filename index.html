@@ -27,8 +27,8 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .logo-header {
-            height: 75px;
-            max-width: 220px;
+            height: 85px;
+            max-width: 260px;
             object-fit: contain;
             margin: 0 auto 8px;
             display: block;
@@ -75,20 +75,13 @@
         .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         .table th { background: #f8f9fa; }
-        #results button {
-            background: #e3f2fd;
-            color: var(--primary);
-            margin: 6px 0;
-            width: 100%;
-            text-align: left;
-        }
         #bill {
             background: white;
-            padding: 20px;
-            border: 3px solid var(--primary);
+            padding: 25px;
+            border: 4px solid var(--primary);
             border-radius: 12px;
             margin: 15px 0;
-            min-height: 400px;
+            min-height: 450px;
         }
         .modal {
             display: none;
@@ -119,8 +112,7 @@
 </head>
 <body>
 <header>
-    <img src="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true"
-         alt="Dinamo Tools Logo" class="logo-header">
+    <img src="https://i.imgur.com/QSohfkR.png" alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
     <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">
         ⚙️ Configuration
@@ -133,7 +125,7 @@
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
-        <p class="scanner-note">⚠️ Important: Must be opened with HTTPS (not file://). Best on mobile.</p>
+        <p class="scanner-note">⚠️ Important: Must be opened with HTTPS. Best on mobile.</p>
      
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
@@ -229,7 +221,7 @@
             <span onclick="closeConfigModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
         <input id="logoUrl" placeholder="Logo Image URL" 
-               value="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true">
+               value="https://i.imgur.com/QSohfkR.png">
         <input id="businessName" placeholder="Business Name" value="Dinamo Tools Sales & Service">
         <input id="nit" placeholder="NIT (Tax ID)" value="900.123.456-7">
         <input id="address" placeholder="Full Address" value="Calle 123 #45-67, Bogotá, Colombia">
@@ -266,7 +258,7 @@ let scanMode = 'addProduct';
 let editMode = null;
 
 let storeConfig = {
-    logoUrl: "https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true",
+    logoUrl: "https://i.imgur.com/QSohfkR.png",
     businessName: "Dinamo Tools Sales & Service",
     nit: "900.123.456-7",
     address: "Calle 123 #45-67, Bogotá, Colombia",
@@ -325,24 +317,24 @@ function loadData() {
     });
 }
 
-// ================== LOGO TO BASE64 (for better PDF) ==================
+// ================== LOGO TO BASE64 HELPER (Critical for PDF) ==================
 async function getLogoBase64(url) {
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || 400;
-            canvas.height = img.naturalHeight || 150;
+            canvas.width = img.naturalWidth || 600;
+            canvas.height = img.naturalHeight || 250;
             canvas.getContext('2d').drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
         img.onerror = () => resolve(url);
-        img.src = url;
+        img.src = url + "?t=" + Date.now();
     });
 }
 
-// ================== SCANNER ==================
+// ================== SCANNER FUNCTIONS ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
@@ -396,7 +388,7 @@ async function initScanner() {
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
         statusEl.style.color = "#d32f2f";
-        statusEl.textContent = "❌ Camera error. Please try again.";
+        statusEl.textContent = "❌ Camera error. Please allow access and retry.";
     }
 }
 
@@ -409,7 +401,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported.");
+        alert("Flashlight not supported on this device.");
     }
 }
 
@@ -430,14 +422,14 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 function scanForAddToBill() {
     scanMode = 'addToBill';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan to add to invoice";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function scanForEdit() {
     scanMode = 'editProduct';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan to edit product";
+    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
@@ -462,9 +454,11 @@ function addToCart(product) {
     const qtyStr = prompt(`Quantity for "${product.name}":`, "1");
     const qty = parseInt(qtyStr);
     if (!qty || qty <= 0) return;
-    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available!`);
+    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available in stock!`);
 
-    db.ref('products/' + product.code).update({ qty: firebase.database.ServerValue.increment(-qty) });
+    db.ref('products/' + product.code).update({
+        qty: firebase.database.ServerValue.increment(-qty)
+    });
     cart.push({ ...product, qty });
     renderCart();
     document.getElementById('search').value = '';
@@ -518,8 +512,8 @@ function renderProductList(filtered = products) {
 
 function filterProductList() {
     const query = document.getElementById('productSearch').value.toLowerCase().trim();
-    const filtered = products.filter(p => 
-        (p.name || '').toLowerCase().includes(query) || 
+    const filtered = products.filter(p =>
+        (p.name || '').toLowerCase().includes(query) ||
         (p.code || '').toString().includes(query)
     );
     renderProductList(filtered);
@@ -528,14 +522,16 @@ function filterProductList() {
 function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
-    db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
-        .then(() => alert("✅ Stock updated"));
+    db.ref('products/' + code).update({
+        qty: firebase.database.ServerValue.increment(qty)
+    }).then(() => alert("✅ Stock updated")).catch(err => alert("Error: " + err.message));
 }
 
 function deleteProduct(code) {
     if (confirm(`Delete product ${code}?`)) {
         db.ref('products/' + code).remove()
-            .then(() => alert("✅ Product deleted"));
+            .then(() => alert("✅ Product deleted"))
+            .catch(err => alert("Error: " + err.message));
     }
 }
 
@@ -557,18 +553,16 @@ function editProduct(code) {
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
     if (!code) return alert("❌ Barcode/Code is required!");
-
+   
     const name = document.getElementById('pname').value.trim() || "Unnamed Product";
     const price = parseFloat(document.getElementById('pprice').value) || 0;
     const cost = parseFloat(document.getElementById('pcost').value) || 0;
     const qty = parseFloat(document.getElementById('pqty').value) || 0;
     const minStock = parseInt(document.getElementById('pminstock').value) || 5;
     const cat = document.getElementById('pcat').value.trim();
-
     let product = { name, code, cat, price, cost, qty, minStock, imageUrl: '' };
     const existing = products.find(p => p.code === code);
     if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
-
     const file = document.getElementById('pimage').files[0];
     if (file) {
         try {
@@ -576,23 +570,33 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            alert("⚠️ Image upload failed.");
+            alert("⚠️ Image upload failed. Saving without image.");
         }
     }
-
-    await db.ref('products/' + code).set(product);
-    alert("✅ Product saved successfully!");
-    showVerification(!!editMode);
-    editMode = null;
-    renderProductList();
-    updateInventorySummary();
+    try {
+        await db.ref('products/' + code).set(product);
+        alert("✅ Product saved successfully!");
+        showVerification(!!editMode);
+        editMode = null;
+        const snap = await db.ref('products').once('value');
+        products = snap.val() ? Object.values(snap.val()) : [];
+        renderProductList();
+        updateInventorySummary();
+    } catch (err) {
+        alert("❌ Failed to save product: " + err.message);
+    }
 }
 
 function showVerification(isUpdate) {
     const ver = document.getElementById('verificationBox');
-    ver.innerHTML = `<strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong>`;
+    ver.innerHTML = `
+        <strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong><br><br>
+        <strong>Barcode:</strong> ${document.getElementById('pcode').value}<br>
+        <strong>Name:</strong> ${document.getElementById('pname').value || '—'}<br>
+        <strong>Price:</strong> $${parseFloat(document.getElementById('pprice').value || 0).toLocaleString('es-CO')}
+    `;
     ver.style.display = 'block';
-    setTimeout(() => ver.style.display = 'none', 6000);
+    setTimeout(() => ver.style.display = 'none', 8000);
     document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
     document.getElementById('pimage').value = '';
     document.getElementById('imagePreview').innerHTML = '';
@@ -602,9 +606,16 @@ function uploadFromFile() { document.getElementById('pimage').click(); }
 
 function captureProductPhoto() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
     input.onchange = e => {
-        if (e.target.files[0]) document.getElementById('pimage').files = e.target.files;
+        if (e.target.files[0]) {
+            const dt = new DataTransfer();
+            dt.items.add(e.target.files[0]);
+            document.getElementById('pimage').files = dt.files;
+            document.getElementById('pimage').dispatchEvent(new Event('change'));
+        }
     };
     input.click();
 }
@@ -644,7 +655,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED BILL GENERATION ==================
+// ================== FIXED BILL GENERATION & PDF ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -656,10 +667,10 @@ async function generateBill() {
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:12px 15px; border-bottom:1px solid #ddd;">${item.name}</td>
-                <td style="padding:12px 15px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:14px 15px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:14px 15px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:14px 15px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:14px 15px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -667,7 +678,10 @@ async function generateBill() {
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const currentDate = new Date().toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
 
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
@@ -675,52 +689,57 @@ async function generateBill() {
     let logoSrc = storeConfig.logoUrl;
     try {
         logoSrc = await getLogoBase64(storeConfig.logoUrl);
-    } catch(e) { console.warn("Logo fallback used"); }
+    } catch(e) {
+        console.warn("Using original logo URL");
+    }
 
     const billHTML = `
-    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#fff; padding:25px; border:4px solid #1976d2; border-radius:15px; font-family:Arial,sans-serif;">
-        <div style="text-align:center; margin-bottom:20px;">
-            <img src="${logoSrc}" alt="Dinamo Tools" style="max-height:100px; margin-bottom:10px;">
-            <h1 style="margin:10px 0; color:#1976d2;">${storeConfig.businessName}</h1>
-            <p style="margin:5px 0; font-size:15px;">
+    <div id="invoiceContent" style="max-width:850px; margin:0 auto; background:#ffffff; padding:35px; border:5px solid #1976d2; border-radius:18px; font-family:'Segoe UI',Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:35px;">
+            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:130px; margin-bottom:15px;">
+            <h1 style="margin:12px 0 10px; font-size:34px; color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:0; font-size:16px; color:#444;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
 
-        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
-            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:35px; font-size:16px;">
+            <div>
+                <strong style="color:#1976d2;">Factura No:</strong> ${invoiceId}<br>
+                <strong style="color:#1976d2;">Fecha:</strong> ${currentDate}
+            </div>
             <div style="text-align:right;">
                 <strong>Cliente:</strong> ${customer}<br>
-                ${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}
+                ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
             </div>
         </div>
 
-        <table style="width:100%; border-collapse:collapse; margin:20px 0;">
+        <table style="width:100%; border-collapse:collapse; margin:25px 0;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
-                    <th style="padding:12px; text-align:left;">Producto</th>
-                    <th style="padding:12px; text-align:center;">Cant.</th>
-                    <th style="padding:12px; text-align:right;">Precio Unit.</th>
-                    <th style="padding:12px; text-align:right;">Total</th>
+                    <th style="padding:15px 12px; text-align:left;">Producto</th>
+                    <th style="padding:15px 12px; text-align:center;">Cant.</th>
+                    <th style="padding:15px 12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:15px 12px; text-align:right;">Total</th>
                 </tr>
             </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
 
-        <div style="text-align:right; margin-top:30px;">
-            <table style="margin-left:auto; font-size:16px;">
-                <tr><td>Subtotal:</td><td style="padding-left:40px;">$${subtotal.toLocaleString('es-CO')}</td></tr>
-                <tr><td>IVA (${ivaRate}%):</td><td style="padding-left:40px;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
-                <tr style="font-size:23px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
-                    <td>TOTAL A PAGAR:</td>
-                    <td style="padding-left:40px;">$${grandTotal.toLocaleString('es-CO')}</td>
+        <div style="text-align:right; margin-top:40px;">
+            <table style="margin-left:auto; width:400px; font-size:17px;">
+                <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:26px; font-weight:bold; color:#1976d2; border-top:4px double #1976d2;">
+                    <td style="padding:18px 0;">TOTAL A PAGAR</td>
+                    <td style="padding:18px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
 
-        <div style="text-align:center; margin-top:40px; color:#555;">
+        <div style="text-align:center; margin-top:60px; color:#555; font-size:15.5px;">
             Gracias por su compra 🛠️ • ¡Vuelva pronto a Dinamo Tools Sales & Service!
         </div>
     </div>`;
@@ -728,12 +747,17 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
 
     db.ref('bills').push({
-        invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount,
-        subtotal, customer, customerId: customerIdVal, items: cart
+        invoiceId,
+        date: Date.now(),
+        total: grandTotal,
+        iva: ivaAmount,
+        subtotal: subtotal,
+        customer,
+        customerId: customerIdVal,
+        items: cart
     });
 }
 
-// ================== PDF DOWNLOAD (Improved) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
@@ -741,14 +765,16 @@ function downloadPDF() {
     }
 
     const opt = {
-        margin: [15, 15, 15, 15],
+        margin: [20, 20, 20, 20],
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
             scale: 2,
             useCORS: true,
             allowTaint: false,
-            letterRendering: true
+            letterRendering: true,
+            scrollX: 0,
+            scrollY: 0
         },
         jsPDF: {
             unit: 'mm',
@@ -757,11 +783,17 @@ function downloadPDF() {
         }
     };
 
-    html2pdf().set(opt).from(element).save()
-        .catch(err => alert("PDF generated with possible logo issue."));
+    // Small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+        html2pdf().set(opt).from(element).save()
+            .then(() => console.log("PDF generated successfully"))
+            .catch(err => {
+                console.error("PDF Error:", err);
+                alert("PDF generated, but there might be an issue with the logo or content.");
+            });
+    }, 500);
 }
 
-// ================== PRINT FUNCTION (Improved) ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -772,9 +804,8 @@ function printBill() {
         <head>
             <title>Factura - Dinamo Tools Sales & Service</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 30px; margin: 0; }
-                #invoiceContent { max-width: 800px; margin: 0 auto; }
-                img { max-height: 100px; }
+                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; margin: 0; }
+                img { max-height: 130px; }
             </style>
         </head>
         <body onload="window.print(); setTimeout(() => window.close(), 800);">
@@ -794,7 +825,8 @@ function clearCart() {
 
 function sendWhatsApp() {
     const billText = document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice";
-    window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
+    const text = encodeURIComponent(billText);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
 }
 
 // ================== INITIALIZE ==================
