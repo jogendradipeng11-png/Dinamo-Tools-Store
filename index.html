@@ -89,7 +89,7 @@
             margin: 15px 0;
             font-size: 15px;
             line-height: 1.6;
-            min-height: 200px;
+            min-height: 300px;
         }
         .modal {
             display: none;
@@ -321,7 +321,7 @@ function loadData() {
     });
 }
 
-// ================== SCANNER (Fixed) ==================
+// ================== SCANNER ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
@@ -329,7 +329,6 @@ function handleScannedCode(decodedText) {
         html5QrCode.pause(true);
         setTimeout(() => { if (html5QrCode) html5QrCode.resume(); }, 1200);
     }
-
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
@@ -397,7 +396,7 @@ async function initScanner() {
             document.getElementById('flashBtn').style.display = 'inline-block';
         } catch (fallbackErr) {
             statusEl.style.color = "#d32f2f";
-            statusEl.innerHTML = `❌ Camera not available.<br>Please allow camera access and try again.<br><br>
+            statusEl.innerHTML = `❌ Camera not available.<br>Please allow camera access.<br><br>
                 <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px;">🔄 Retry Camera</button>`;
         }
     }
@@ -678,7 +677,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED BILLING WITH LOGO IN PDF ==================
+// ================== FIXED BILL GENERATION WITH LOGO ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -712,9 +711,11 @@ function generateBill() {
 
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
-        <!-- Header with Logo -->
         <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
-            ${storeConfig.logoUrl ? `<img src="${storeConfig.logoUrl}" alt="Logo" style="max-width:180px; height:auto; margin-bottom:12px;">` : ''}
+            <img src="${storeConfig.logoUrl}" 
+                 alt="Tool Store Logo" 
+                 style="max-width:180px; height:auto; margin-bottom:12px;" 
+                 crossorigin="anonymous">
             <h1 style="margin:8px 0 5px; color:#1976d2; font-size:28px;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px;">
                 ${storeConfig.address}<br>
@@ -723,7 +724,6 @@ function generateBill() {
             </p>
         </div>
 
-        <!-- Invoice Info -->
         <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
             <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
             <div style="text-align:right;">
@@ -732,7 +732,6 @@ function generateBill() {
             </div>
         </div>
 
-        <!-- Items Table -->
         <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15px;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
@@ -745,7 +744,6 @@ function generateBill() {
             <tbody>${itemsHTML}</tbody>
         </table>
 
-        <!-- Totals -->
         <div style="text-align:right; margin-top:30px; font-size:16px;">
             <table style="width:100%; max-width:400px; margin-left:auto;">
                 <tr><td style="padding:8px 0; text-align:right;">Subtotal:</td><td style="padding:8px 0; text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
@@ -769,7 +767,7 @@ function generateBill() {
     });
 }
 
-// ================== FIXED DOWNLOAD PDF (Logo + No Blank Page) ==================
+// ================== FIXED PDF DOWNLOAD (Logo should appear now) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
@@ -783,6 +781,7 @@ function downloadPDF() {
         html2canvas: { 
             scale: 2,
             useCORS: true,
+            allowTaint: true,
             letterRendering: true,
             scrollX: 0,
             scrollY: 0
@@ -794,17 +793,16 @@ function downloadPDF() {
         }
     };
 
-    // Small delay to ensure logo and styles are fully loaded
     setTimeout(() => {
         html2pdf().set(opt).from(element).save()
             .catch(err => {
-                console.error("PDF error:", err);
-                alert("Error generating PDF. Please try again.");
+                console.error("PDF Error:", err);
+                alert("PDF generated but logo may not appear due to external image restrictions.\nTry hosting logo on Firebase or Imgur.");
             });
-    }, 500);
+    }, 800);
 }
 
-// ================== IMPROVED PRINT FUNCTION ==================
+// ================== FIXED PRINT FUNCTION ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -813,13 +811,14 @@ function printBill() {
     printWindow.document.write(`
         <html>
         <head>
-            <title>Factura - Tool Store Colombia</title>
+            <title>Factura Tool Store Colombia</title>
             <style>
-                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; }
+                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; margin: 0; }
+                img { max-width: 180px; height: auto; }
                 #invoiceContent { max-width: 800px; margin: 0 auto; }
             </style>
         </head>
-        <body onload="window.print(); window.close();">
+        <body onload="window.print(); setTimeout(() => window.close(), 800);">
             ${bill.innerHTML}
         </body>
         </html>
