@@ -89,6 +89,7 @@
             margin: 15px 0;
             font-size: 15px;
             line-height: 1.6;
+            min-height: 200px;
         }
         .modal {
             display: none;
@@ -320,11 +321,10 @@ function loadData() {
     });
 }
 
-// ================== IMPROVED SCANNER (Fixed - No more NotFoundError) ==================
+// ================== SCANNER (Fixed) ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
-
     if (html5QrCode) {
         html5QrCode.pause(true);
         setTimeout(() => { if (html5QrCode) html5QrCode.resume(); }, 1200);
@@ -385,41 +385,20 @@ async function initScanner() {
     };
 
     try {
-        // Prefer back camera, but don't force it
-        await html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            handleScannedCode,
-            () => {}
-        );
+        await html5QrCode.start({ facingMode: "environment" }, config, handleScannedCode, () => {});
         statusEl.style.color = "#2e7d32";
         statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
-        console.warn("Back camera failed, trying any camera...", err);
-
         try {
-            // Fallback to any available camera (front or back)
-            await html5QrCode.start(
-                true,  // Use default camera
-                config,
-                handleScannedCode,
-                () => {}
-            );
+            await html5QrCode.start(true, config, handleScannedCode, () => {});
             statusEl.style.color = "#2e7d32";
             statusEl.textContent = "✅ Scanner started (using available camera)";
             document.getElementById('flashBtn').style.display = 'inline-block';
         } catch (fallbackErr) {
-            console.error("Scanner fallback also failed:", fallbackErr);
-            let msg = "❌ Camera not found or access denied.<br>";
-            if (location.protocol !== "https:") msg += "Please open this page using HTTPS.<br>";
-            msg += "Make sure camera permission is allowed.";
-
             statusEl.style.color = "#d32f2f";
-            statusEl.innerHTML = `${msg}<br><br>
-                <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px; cursor:pointer;">
-                    🔄 Retry Camera
-                </button>`;
+            statusEl.innerHTML = `❌ Camera not available.<br>Please allow camera access and try again.<br><br>
+                <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px;">🔄 Retry Camera</button>`;
         }
     }
 }
@@ -699,7 +678,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== BILLING & PDF ==================
+// ================== FIXED BILLING WITH LOGO IN PDF ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -732,7 +711,8 @@ function generateBill() {
     const customerIdVal = document.getElementById('customerId').value.trim();
 
     const billHTML = `
-    <div style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
+        <!-- Header with Logo -->
         <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
             ${storeConfig.logoUrl ? `<img src="${storeConfig.logoUrl}" alt="Logo" style="max-width:180px; height:auto; margin-bottom:12px;">` : ''}
             <h1 style="margin:8px 0 5px; color:#1976d2; font-size:28px;">${storeConfig.businessName}</h1>
@@ -743,6 +723,7 @@ function generateBill() {
             </p>
         </div>
 
+        <!-- Invoice Info -->
         <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
             <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
             <div style="text-align:right;">
@@ -751,6 +732,7 @@ function generateBill() {
             </div>
         </div>
 
+        <!-- Items Table -->
         <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15px;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
@@ -763,6 +745,7 @@ function generateBill() {
             <tbody>${itemsHTML}</tbody>
         </table>
 
+        <!-- Totals -->
         <div style="text-align:right; margin-top:30px; font-size:16px;">
             <table style="width:100%; max-width:400px; margin-left:auto;">
                 <tr><td style="padding:8px 0; text-align:right;">Subtotal:</td><td style="padding:8px 0; text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
@@ -786,19 +769,62 @@ function generateBill() {
     });
 }
 
+// ================== FIXED DOWNLOAD PDF (Logo + No Blank Page) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
-    if (!element.innerHTML.trim()) return alert("Generate invoice first!");
+    if (!element || !element.innerHTML.trim()) {
+        return alert("❌ Please generate the invoice first!");
+    }
 
     const opt = {
         margin: [15, 15, 15, 15],
         filename: `Factura_ToolStore_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            letterRendering: true,
+            scrollX: 0,
+            scrollY: 0
+        },
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait' 
+        }
     };
 
-    html2pdf().set(opt).from(element).save();
+    // Small delay to ensure logo and styles are fully loaded
+    setTimeout(() => {
+        html2pdf().set(opt).from(element).save()
+            .catch(err => {
+                console.error("PDF error:", err);
+                alert("Error generating PDF. Please try again.");
+            });
+    }, 500);
+}
+
+// ================== IMPROVED PRINT FUNCTION ==================
+function printBill() {
+    const bill = document.getElementById('bill');
+    if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Factura - Tool Store Colombia</title>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; }
+                #invoiceContent { max-width: 800px; margin: 0 auto; }
+            </style>
+        </head>
+        <body onload="window.print(); window.close();">
+            ${bill.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 function clearCart() {
@@ -806,15 +832,6 @@ function clearCart() {
         cart = [];
         renderCart();
     }
-}
-
-function printBill() {
-    const bill = document.getElementById('bill');
-    if (!bill.innerHTML) return alert("Generate invoice first!");
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Invoice</title></head><body>${bill.innerHTML}</body></html>`);
-    win.document.close();
-    setTimeout(() => win.print(), 500);
 }
 
 function sendWhatsApp() {
