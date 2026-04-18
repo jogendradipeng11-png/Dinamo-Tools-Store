@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    
     <style>
         :root { --primary: #1976d2; }
         body {
@@ -26,7 +27,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .logo-header {
-            height: 70px;
+            height: 75px;
             max-width: 220px;
             object-fit: contain;
             margin: 0 auto 8px;
@@ -83,13 +84,11 @@
         }
         #bill {
             background: white;
-            padding: 25px;
-            border: 2px solid var(--primary);
-            border-radius: 10px;
+            padding: 20px;
+            border: 3px solid var(--primary);
+            border-radius: 12px;
             margin: 15px 0;
-            font-size: 15px;
-            line-height: 1.6;
-            min-height: 300px;
+            min-height: 400px;
         }
         .modal {
             display: none;
@@ -127,6 +126,7 @@
         ⚙️ Configuration
     </button>
 </header>
+
 <div class="container">
     <!-- SCANNER -->
     <div class="card">
@@ -140,9 +140,9 @@
             <button id="flashBtn" class="flash-btn" onclick="toggleFlashlight()" style="display:none;">🔦 Flashlight OFF</button>
             <button onclick="initScanner()" style="padding:10px 20px; background:#4caf50;">🔄 Start / Retry Camera</button>
         </div>
-     
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
     </div>
+
     <!-- ADD / UPDATE PRODUCT -->
     <div class="card">
         <h3>📦 Add / Update Product</h3>
@@ -169,11 +169,13 @@
     
         <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
     </div>
+
     <!-- INVENTORY OVERVIEW -->
     <div class="card">
         <h3>📊 Inventory Overview</h3>
         <div id="inventorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
     </div>
+
     <!-- MANAGE PRODUCTS -->
     <div class="card">
         <h3>🗂️ Manage Products & Stock</h3>
@@ -183,6 +185,7 @@
         <input id="productSearch" placeholder="Search products..." onkeyup="filterProductList()" style="margin-bottom:15px;">
         <div id="productList" style="max-height: 420px; overflow-y: auto;"></div>
     </div>
+
     <!-- BILLING -->
     <div class="card">
         <h3>🛒 Billing</h3>
@@ -206,14 +209,15 @@
         </button>
         <button onclick="clearCart()" class="danger-btn" style="margin-top:8px; width:100%;">Clear Cart</button>
     </div>
+
     <!-- INVOICE -->
     <div class="card">
         <h3>📄 Sales Invoice</h3>
         <div id="bill"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-            <button onclick="downloadPDF()">⬇️ Download PDF</button>
-            <button onclick="printBill()">🖨️ Print</button>
-            <button onclick="sendWhatsApp()">📱 Send via WhatsApp</button>
+            <button onclick="downloadPDF()" style="padding:12px 20px;">⬇️ Download PDF</button>
+            <button onclick="printBill()" style="padding:12px 20px;">🖨️ Print Invoice</button>
+            <button onclick="sendWhatsApp()" style="padding:12px 20px;">📱 Send via WhatsApp</button>
         </div>
     </div>
 </div>
@@ -321,7 +325,7 @@ function loadData() {
     });
 }
 
-// ================== LOGO TO BASE64 HELPER (Fix for GitHub logo in PDF) ==================
+// ================== LOGO TO BASE64 (for better PDF) ==================
 async function getLogoBase64(url) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -329,24 +333,21 @@ async function getLogoBase64(url) {
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.naturalWidth || 400;
-            canvas.height = img.naturalHeight || 400;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            canvas.height = img.naturalHeight || 150;
+            canvas.getContext('2d').drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => resolve(url); // fallback
+        img.onerror = () => resolve(url);
         img.src = url;
     });
 }
 
-// ================== SCANNER & OTHER FUNCTIONS (unchanged) ==================
+// ================== SCANNER ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
-    if (html5QrCode) {
-        html5QrCode.pause(true);
-        setTimeout(() => { if (html5QrCode) html5QrCode.resume(); }, 1200);
-    }
+    if (html5QrCode) html5QrCode.pause(true);
+    
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
@@ -358,8 +359,7 @@ function handleScannedCode(decodedText) {
             statusEl.textContent = `❌ Product not found: ${code}`;
         }
         scanMode = 'addProduct';
-    }
-    else if (scanMode === 'editProduct') {
+    } else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) {
             editProduct(code);
@@ -370,49 +370,33 @@ function handleScannedCode(decodedText) {
             statusEl.textContent = `❌ Product not found`;
         }
         scanMode = 'addProduct';
-    }
-    else {
+    } else {
         document.getElementById('pcode').value = code;
         statusEl.style.color = "#2e7d32";
         statusEl.textContent = `✅ Scanned Code: ${code}`;
     }
+    
+    if (html5QrCode) setTimeout(() => html5QrCode.resume(), 1500);
 }
 
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Requesting camera access...";
     statusEl.style.color = "#1976d2";
-    if (html5QrCode) {
-        await html5QrCode.stop().catch(() => {});
-        html5QrCode = null;
-    }
+
+    if (html5QrCode) await html5QrCode.stop().catch(() => {});
+
     html5QrCode = new Html5Qrcode("reader");
-    const config = {
-        fps: 15,
-        qrbox: (viewfinderWidth, viewfinderHeight) => ({
-            width: Math.min(viewfinderWidth, viewfinderHeight) * 0.88,
-            height: Math.min(viewfinderWidth, viewfinderHeight) * 0.45
-        }),
-        aspectRatio: 1.777,
-        disableFlip: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-    };
+    const config = { fps: 15, qrbox: 250, aspectRatio: 1.777 };
+
     try {
         await html5QrCode.start({ facingMode: "environment" }, config, handleScannedCode, () => {});
         statusEl.style.color = "#2e7d32";
         statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
-        try {
-            await html5QrCode.start(true, config, handleScannedCode, () => {});
-            statusEl.style.color = "#2e7d32";
-            statusEl.textContent = "✅ Scanner started (using available camera)";
-            document.getElementById('flashBtn').style.display = 'inline-block';
-        } catch (fallbackErr) {
-            statusEl.style.color = "#d32f2f";
-            statusEl.innerHTML = `❌ Camera not available.<br>Please allow camera access.<br><br>
-                <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px;">🔄 Retry Camera</button>`;
-        }
+        statusEl.style.color = "#d32f2f";
+        statusEl.textContent = "❌ Camera error. Please try again.";
     }
 }
 
@@ -425,8 +409,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported on this device.");
-        isFlashOn = false;
+        alert("Flashlight not supported.");
     }
 }
 
@@ -438,38 +421,34 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Processing image...";
-    statusEl.style.color = "#1976d2";
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
     html5QrCode.scanFile(e.target.files[0], true)
-        .then(decodedText => handleScannedCode(decodedText))
-        .catch(() => {
-            statusEl.style.color = "#d32f2f";
-            statusEl.textContent = "❌ Could not read code from photo";
-        });
+        .then(handleScannedCode)
+        .catch(() => statusEl.textContent = "❌ Could not read code from photo");
 });
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to add to invoice";
+    document.getElementById('scannerStatus').textContent = "📱 Scan to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function scanForEdit() {
     scanMode = 'editProduct';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to edit product";
+    document.getElementById('scannerStatus').textContent = "📱 Scan to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
-// Search & Cart
+// ================== SEARCH & CART ==================
 function searchProduct() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = '';
     if (!query) return;
-    products.filter(p =>
-        (p.name && p.name.toLowerCase().includes(query)) ||
+    products.filter(p => 
+        (p.name && p.name.toLowerCase().includes(query)) || 
         (p.code && p.code.toString().includes(query))
     ).forEach(p => {
         const btn = document.createElement('button');
@@ -483,12 +462,9 @@ function addToCart(product) {
     const qtyStr = prompt(`Quantity for "${product.name}":`, "1");
     const qty = parseInt(qtyStr);
     if (!qty || qty <= 0) return;
-    if (qty > (product.qty || 0)) {
-        return alert(`Only ${product.qty || 0} units available in stock!`);
-    }
-    db.ref('products/' + product.code).update({
-        qty: firebase.database.ServerValue.increment(-qty)
-    });
+    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available!`);
+
+    db.ref('products/' + product.code).update({ qty: firebase.database.ServerValue.increment(-qty) });
     cart.push({ ...product, qty });
     renderCart();
     document.getElementById('search').value = '';
@@ -510,7 +486,7 @@ function renderCart() {
     });
 }
 
-// Product Management
+// ================== PRODUCT MANAGEMENT ==================
 function renderProductList(filtered = products) {
     const listDiv = document.getElementById('productList');
     listDiv.innerHTML = '';
@@ -522,7 +498,6 @@ function renderProductList(filtered = products) {
         const isLow = (p.qty || 0) < (p.minStock || 5);
         const div = document.createElement('div');
         div.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid #eee; ${isLow ? 'background:#ffebee;' : ''}`;
-     
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px;">
                 ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : `<div style="width:60px;height:60px;background:#eee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">No Img</div>`}
@@ -543,8 +518,8 @@ function renderProductList(filtered = products) {
 
 function filterProductList() {
     const query = document.getElementById('productSearch').value.toLowerCase().trim();
-    const filtered = products.filter(p =>
-        (p.name || '').toLowerCase().includes(query) ||
+    const filtered = products.filter(p => 
+        (p.name || '').toLowerCase().includes(query) || 
         (p.code || '').toString().includes(query)
     );
     renderProductList(filtered);
@@ -553,16 +528,14 @@ function filterProductList() {
 function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
-    db.ref('products/' + code).update({
-        qty: firebase.database.ServerValue.increment(qty)
-    }).then(() => alert("✅ Stock updated")).catch(err => alert("Error: " + err.message));
+    db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
+        .then(() => alert("✅ Stock updated"));
 }
 
 function deleteProduct(code) {
     if (confirm(`Delete product ${code}?`)) {
         db.ref('products/' + code).remove()
-            .then(() => alert("✅ Product deleted"))
-            .catch(err => alert("Error: " + err.message));
+            .then(() => alert("✅ Product deleted"));
     }
 }
 
@@ -584,16 +557,18 @@ function editProduct(code) {
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
     if (!code) return alert("❌ Barcode/Code is required!");
-   
+
     const name = document.getElementById('pname').value.trim() || "Unnamed Product";
     const price = parseFloat(document.getElementById('pprice').value) || 0;
     const cost = parseFloat(document.getElementById('pcost').value) || 0;
     const qty = parseFloat(document.getElementById('pqty').value) || 0;
     const minStock = parseInt(document.getElementById('pminstock').value) || 5;
     const cat = document.getElementById('pcat').value.trim();
+
     let product = { name, code, cat, price, cost, qty, minStock, imageUrl: '' };
     const existing = products.find(p => p.code === code);
     if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
+
     const file = document.getElementById('pimage').files[0];
     if (file) {
         try {
@@ -601,33 +576,23 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            alert("⚠️ Image upload failed. Saving without image.");
+            alert("⚠️ Image upload failed.");
         }
     }
-    try {
-        await db.ref('products/' + code).set(product);
-        alert("✅ Product saved successfully!");
-        showVerification(!!editMode);
-        editMode = null;
-        const snap = await db.ref('products').once('value');
-        products = snap.val() ? Object.values(snap.val()) : [];
-        renderProductList();
-        updateInventorySummary();
-    } catch (err) {
-        alert("❌ Failed to save product: " + err.message);
-    }
+
+    await db.ref('products/' + code).set(product);
+    alert("✅ Product saved successfully!");
+    showVerification(!!editMode);
+    editMode = null;
+    renderProductList();
+    updateInventorySummary();
 }
 
 function showVerification(isUpdate) {
     const ver = document.getElementById('verificationBox');
-    ver.innerHTML = `
-        <strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong><br><br>
-        <strong>Barcode:</strong> ${document.getElementById('pcode').value}<br>
-        <strong>Name:</strong> ${document.getElementById('pname').value || '—'}<br>
-        <strong>Price:</strong> $${parseFloat(document.getElementById('pprice').value || 0).toLocaleString('es-CO')}
-    `;
+    ver.innerHTML = `<strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong>`;
     ver.style.display = 'block';
-    setTimeout(() => ver.style.display = 'none', 8000);
+    setTimeout(() => ver.style.display = 'none', 6000);
     document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
     document.getElementById('pimage').value = '';
     document.getElementById('imagePreview').innerHTML = '';
@@ -637,16 +602,9 @@ function uploadFromFile() { document.getElementById('pimage').click(); }
 
 function captureProductPhoto() {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
+    input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
     input.onchange = e => {
-        if (e.target.files[0]) {
-            const dt = new DataTransfer();
-            dt.items.add(e.target.files[0]);
-            document.getElementById('pimage').files = dt.files;
-            document.getElementById('pimage').dispatchEvent(new Event('change'));
-        }
+        if (e.target.files[0]) document.getElementById('pimage').files = e.target.files;
     };
     input.click();
 }
@@ -686,22 +644,22 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== BILL GENERATION WITH NEW LOGO ==================
+// ================== FIXED BILL GENERATION ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
     let subtotal = 0;
     let itemsHTML = '';
-   
+
     cart.forEach(item => {
         const amount = item.qty * (item.price || 0);
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:12px 15px; border-bottom:1px solid #e0e0e0;">${item.name}</td>
-                <td style="padding:12px 15px; text-align:center; border-bottom:1px solid #e0e0e0;">${item.qty}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #e0e0e0;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #e0e0e0; font-weight:500;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:12px 15px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:12px 15px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -709,96 +667,60 @@ async function generateBill() {
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', {
-        timeZone: 'America/Bogota',
-        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
 
-    // Convert logo to base64 to fix GitHub CORS issue
     let logoSrc = storeConfig.logoUrl;
     try {
         logoSrc = await getLogoBase64(storeConfig.logoUrl);
-    } catch (e) {
-        console.warn("Using original logo URL");
-    }
+    } catch(e) { console.warn("Logo fallback used"); }
 
     const billHTML = `
-    <div id="invoiceContent" style="
-        max-width: 820px;
-        margin: 20px auto;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: #ffffff;
-        color: #333;
-        line-height: 1.6;
-        border: 4px solid #1976d2;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(25, 118, 210, 0.15);
-    ">
-        <!-- Header -->
-        <div style="background: #1976d2; color: white; padding: 25px 30px; text-align: center;">
-            <img src="${logoSrc}"
-                 alt="Dinamo Tools Logo"
-                 style="max-width: 180px; height: auto; margin-bottom: 15px;"
-                 crossorigin="anonymous">
-            <h1 style="margin: 10px 0 8px; font-size: 28px; font-weight: 700;">${storeConfig.businessName}</h1>
-            <p style="margin: 0; font-size: 15.5px; opacity: 0.95;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#fff; padding:25px; border:4px solid #1976d2; border-radius:15px; font-family:Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:20px;">
+            <img src="${logoSrc}" alt="Dinamo Tools" style="max-height:100px; margin-bottom:10px;">
+            <h1 style="margin:10px 0; color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:5px 0; font-size:15px;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
-        <!-- Invoice Details -->
-        <div style="padding: 25px 30px; background: #f8fafd; border-bottom: 2px solid #e0e0e0;">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                <div>
-                    <strong style="color: #1976d2;">Factura No:</strong> ${invoiceId}<br>
-                    <strong style="color: #1976d2;">Fecha:</strong> ${currentDate}
-                </div>
-                <div style="text-align: right;">
-                    <strong>Cliente:</strong> ${customer}<br>
-                    ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
-                </div>
+
+        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
+            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
+            <div style="text-align:right;">
+                <strong>Cliente:</strong> ${customer}<br>
+                ${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}
             </div>
         </div>
-        <!-- Products Table -->
-        <div style="padding: 10px 30px 20px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 15.5px;">
-                <thead>
-                    <tr style="background: #1976d2; color: white;">
-                        <th style="padding: 14px 15px; text-align: left; font-weight: 600;">Producto</th>
-                        <th style="padding: 14px 15px; text-align: center; font-weight: 600;">Cant.</th>
-                        <th style="padding: 14px 15px; text-align: right; font-weight: 600;">Precio Unit.</th>
-                        <th style="padding: 14px 15px; text-align: right; font-weight: 600;">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHTML}
-                </tbody>
-            </table>
-        </div>
-        <!-- Totals Section -->
-        <div style="background: #f8fafd; padding: 25px 30px; text-align: right;">
-            <table style="width: 100%; max-width: 380px; margin-left: auto; font-size: 16px;">
-                <tr>
-                    <td style="padding: 9px 0;">Subtotal:</td>
-                    <td style="padding: 9px 0; text-align: right;">$${subtotal.toLocaleString('es-CO')}</td>
+
+        <table style="width:100%; border-collapse:collapse; margin:20px 0;">
+            <thead>
+                <tr style="background:#1976d2; color:white;">
+                    <th style="padding:12px; text-align:left;">Producto</th>
+                    <th style="padding:12px; text-align:center;">Cant.</th>
+                    <th style="padding:12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:12px; text-align:right;">Total</th>
                 </tr>
-                <tr>
-                    <td style="padding: 9px 0;">IVA (${ivaRate}%):</td>
-                    <td style="padding: 9px 0; text-align: right;">$${ivaAmount.toLocaleString('es-CO')}</td>
-                </tr>
-                <tr style="border-top: 3px double #1976d2; font-size: 21px; font-weight: bold; color: #1976d2;">
-                    <td style="padding: 16px 0;">TOTAL A PAGAR:</td>
-                    <td style="padding: 16px 0; text-align: right;">$${grandTotal.toLocaleString('es-CO')}</td>
+            </thead>
+            <tbody>${itemsHTML}</tbody>
+        </table>
+
+        <div style="text-align:right; margin-top:30px;">
+            <table style="margin-left:auto; font-size:16px;">
+                <tr><td>Subtotal:</td><td style="padding-left:40px;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="padding-left:40px;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:23px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
+                    <td>TOTAL A PAGAR:</td>
+                    <td style="padding-left:40px;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
-        <!-- Footer -->
-        <div style="text-align: center; padding: 25px; background: #f8fafd; color: #555; font-size: 14.5px; border-top: 1px solid #e0e0e0;">
+
+        <div style="text-align:center; margin-top:40px; color:#555;">
             Gracias por su compra 🛠️ • ¡Vuelva pronto a Dinamo Tools Sales & Service!
         </div>
     </div>`;
@@ -806,23 +728,18 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
 
     db.ref('bills').push({
-        invoiceId,
-        date: Date.now(),
-        total: grandTotal,
-        iva: ivaAmount,
-        subtotal: subtotal,
-        customer,
-        customerId: customerIdVal,
-        items: cart
+        invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount,
+        subtotal, customer, customerId: customerIdVal, items: cart
     });
 }
 
-// ================== PDF DOWNLOAD & PRINT ==================
+// ================== PDF DOWNLOAD (Improved) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
+
     const opt = {
         margin: [15, 15, 15, 15],
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
@@ -839,21 +756,25 @@ function downloadPDF() {
             orientation: 'portrait'
         }
     };
+
     html2pdf().set(opt).from(element).save()
-        .catch(err => console.error("PDF Error:", err));
+        .catch(err => alert("PDF generated with possible logo issue."));
 }
 
+// ================== PRINT FUNCTION (Improved) ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html>
         <head>
-            <title>Factura Dinamo Tools Sales & Service</title>
+            <title>Factura - Dinamo Tools Sales & Service</title>
             <style>
-                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; margin: 0; }
-                img { max-width: 180px; height: auto; }
+                body { font-family: Arial, sans-serif; padding: 30px; margin: 0; }
+                #invoiceContent { max-width: 800px; margin: 0 auto; }
+                img { max-height: 100px; }
             </style>
         </head>
         <body onload="window.print(); setTimeout(() => window.close(), 800);">
@@ -873,8 +794,7 @@ function clearCart() {
 
 function sendWhatsApp() {
     const billText = document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice";
-    const text = encodeURIComponent(billText);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
 }
 
 // ================== INITIALIZE ==================
