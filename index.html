@@ -643,12 +643,13 @@ async function generateBill() {
     const customerIdVal = document.getElementById('customerId').value.trim();
     const logoSrc = storeConfig.logoUrl || "https://i.imgur.com/xCbfxgt.png";
 
+       // === GENERATE INVOICE HTML ===
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" crossorigin="anonymous" loading="eager" 
-     style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;" 
-     alt="Dinamo Tools Sales & Service">
+            <img src="${logoSrc}" crossorigin="anonymous" loading="eager"
+                 style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"
+                 alt="Dinamo Tools Sales & Service">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -692,10 +693,11 @@ async function generateBill() {
         </div>
     </div>`;
 
-    document.getElementById('bill').innerHTML = billHTML;
-    // ADD THIS LINE:
-document.getElementById('pdfContainer').innerHTML = billHTML;  // for PDF only
+    // ✅ Correct way - Store once and update both containers
+    const invoiceHTML = billHTML;
 
+    document.getElementById('bill').innerHTML = invoiceHTML;
+    document.getElementById('pdfContainer').innerHTML = invoiceHTML;   // Important for PDF generation
     // Save for restore
     lastInvoiceCart = [...cart];
 
@@ -729,15 +731,15 @@ async function downloadPDF() {
     }
 
     try {
-        await new Promise(r => setTimeout(r, 1500));
+        // Give time for logo to load
+        await new Promise(r => setTimeout(r, 1000));
 
         const canvas = await html2canvas(element, {
-            scale: 2,
+            scale: 2.5,
             useCORS: true,
             allowTaint: true,
-            letterRendering: true,
-            scrollX: 0,
-            scrollY: 0
+            backgroundColor: "#ffffff",
+            logging: false
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -749,9 +751,10 @@ async function downloadPDF() {
 
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
+
     } catch (err) {
         console.error(err);
-        alert("❌ Still failed. Use Print Invoice.");
+        alert("❌ PDF download failed. Please try 'Print Invoice' button instead.");
     }
 }
 function PrintInvoice() {
