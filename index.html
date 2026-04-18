@@ -114,7 +114,7 @@
 </head>
 <body>
 <header>
-    <img src="https://i.imgur.com/xCbfxgt.png" alt="Dinamo Tools Logo" class="logo-header">
+    <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png"       alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
     <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px; margin-top:8px;">
         ⚙️ Configuration
@@ -261,7 +261,7 @@ let scanMode = 'addProduct';
 let editMode = null;
 
 let storeConfig = {
-    logoUrl: "https://i.imgur.com/xCbfxgt.png",
+    logoUrl: "https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png",
     businessName: "Dinamo Tools Sales & Service",
     nit: "900.123.456-7",
     address: "Calle 123 #45-67, Bogotá, Colombia",
@@ -648,8 +648,8 @@ async function generateBill() {
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
             <img src="${logoSrc}" crossorigin="anonymous" loading="eager"
-                 style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"
-                 alt="Dinamo Tools Sales & Service">
+             style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"
+             alt="Dinamo Tools Sales & Service">
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
@@ -731,30 +731,36 @@ async function downloadPDF() {
     }
 
     try {
-        // Give time for logo to load
-        await new Promise(r => setTimeout(r, 1000));
+        // Wait for GitHub logo to fully load
+        await new Promise(r => setTimeout(r, 1500));
 
         const canvas = await html2canvas(element, {
-            scale: 2.5,
+            scale: 2.2,
             useCORS: true,
             allowTaint: true,
             backgroundColor: "#ffffff",
-            logging: false
+            logging: false,
+            onclone: (clonedDoc) => {
+                const logo = clonedDoc.querySelector('img[alt="Dinamo Tools Sales & Service"]');
+                if (logo) logo.crossOrigin = "anonymous";
+            }
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const imgData = canvas.toDataURL('image/jpeg', 0.93);
+
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
 
+        alert("✅ PDF downloaded successfully with logo!");
+
     } catch (err) {
-        console.error(err);
-        alert("❌ PDF download failed. Please try 'Print Invoice' button instead.");
+        console.error("PDF Error:", err);
+        alert("❌ PDF still failed.\n\nPlease try:\n1. 'Print Invoice' button\n2. Refresh the page and generate invoice again.");
     }
 }
 function PrintInvoice() {
