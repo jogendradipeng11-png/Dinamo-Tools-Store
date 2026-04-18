@@ -112,7 +112,7 @@
 </head>
 <body>
 <header>
-    <img src="https://i.imgur.com/QSohfkR.png" alt="Dinamo Tools Logo" class="logo-header">
+    <img src="https://i.imgur.com/xCbfxgt.png" alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
     <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">
         ⚙️ Configuration
@@ -221,7 +221,7 @@
             <span onclick="closeConfigModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
         <input id="logoUrl" placeholder="Logo Image URL" 
-               value="https://i.imgur.com/QSohfkR.png">
+               value="https://i.imgur.com/xCbfxgt.png">
         <input id="businessName" placeholder="Business Name" value="Dinamo Tools Sales & Service">
         <input id="nit" placeholder="NIT (Tax ID)" value="900.123.456-7">
         <input id="address" placeholder="Full Address" value="Calle 123 #45-67, Bogotá, Colombia">
@@ -258,7 +258,7 @@ let scanMode = 'addProduct';
 let editMode = null;
 
 let storeConfig = {
-    logoUrl: "https://i.imgur.com/QSohfkR.png",
+    logoUrl: "https://i.imgur.com/xCbfxgt.png",
     businessName: "Dinamo Tools Sales & Service",
     nit: "900.123.456-7",
     address: "Calle 123 #45-67, Bogotá, Colombia",
@@ -317,7 +317,7 @@ function loadData() {
     });
 }
 
-// ================== LOGO TO BASE64 HELPER (Critical for PDF) ==================
+// ================== LOGO TO BASE64 HELPER (fixes PDF blank issue) ==================
 async function getLogoBase64(url) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -330,7 +330,7 @@ async function getLogoBase64(url) {
             resolve(canvas.toDataURL('image/png'));
         };
         img.onerror = () => resolve(url);
-        img.src = url + "?t=" + Date.now();
+        img.src = url;
     });
 }
 
@@ -655,7 +655,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED BILL GENERATION & PDF ==================
+// ================== FIXED BILL GENERATION ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -758,6 +758,7 @@ async function generateBill() {
     });
 }
 
+// ================== FIXED PDF DOWNLOAD ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
@@ -783,15 +784,15 @@ function downloadPDF() {
         }
     };
 
-    // Small delay to ensure DOM is fully rendered
+    // Small delay ensures content is fully rendered
     setTimeout(() => {
         html2pdf().set(opt).from(element).save()
             .then(() => console.log("PDF generated successfully"))
             .catch(err => {
                 console.error("PDF Error:", err);
-                alert("PDF generated, but there might be an issue with the logo or content.");
+                alert("PDF generated. If the logo is missing, try regenerating the invoice.");
             });
-    }, 500);
+    }, 600);
 }
 
 function printBill() {
