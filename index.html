@@ -120,7 +120,6 @@
 </header>
 
 <div class="container">
-
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
@@ -317,7 +316,7 @@ function loadData() {
     });
 }
 
-// ================== LOGO TO BASE64 (fixes logo not showing in PDF) ==================
+// ================== LOGO TO BASE64 ==================
 async function getLogoBase64(url) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -655,7 +654,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== ADVANCED PDF STYLING BILL GENERATION ==================
+// ================== FIXED SINGLE PAGE PRINT + GOOD PDF ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -667,10 +666,10 @@ async function generateBill() {
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:16px 15px; border-bottom:1px solid #e0e0e0;">${item.name}</td>
-                <td style="padding:16px 15px; text-align:center; border-bottom:1px solid #e0e0e0;">${item.qty}</td>
-                <td style="padding:16px 15px; text-align:right; border-bottom:1px solid #e0e0e0;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:16px 15px; text-align:right; border-bottom:1px solid #e0e0e0; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:14px 12px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:14px 12px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -694,20 +693,18 @@ async function generateBill() {
     }
 
     const billHTML = `
-    <div id="invoiceContent" style="max-width:850px; margin:0 auto; background:#ffffff; padding:40px 35px; border:6px solid #1976d2; border-radius:20px; font-family:'Segoe UI',Arial,sans-serif;">
-        <!-- Header -->
-        <div style="text-align:center; margin-bottom:40px;">
-            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:145px; margin-bottom:20px;">
-            <h1 style="margin:10px 0 12px; font-size:36px; color:#1976d2; font-weight:700;">${storeConfig.businessName}</h1>
-            <p style="margin:0; font-size:16.5px; color:#444; line-height:1.5;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:25px;">
+            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:110px; margin-bottom:15px;">
+            <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
 
-        <!-- Invoice Info -->
-        <div style="display:flex; justify-content:space-between; margin-bottom:40px; font-size:16px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-size:15px;">
             <div>
                 <strong style="color:#1976d2;">Factura No:</strong> ${invoiceId}<br>
                 <strong style="color:#1976d2;">Fecha:</strong> ${currentDate}
@@ -718,33 +715,30 @@ async function generateBill() {
             </div>
         </div>
 
-        <!-- Products Table -->
-        <table style="width:100%; border-collapse:collapse; margin:30px 0; font-size:16px;">
+        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15.5px;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
-                    <th style="padding:16px 15px; text-align:left; font-weight:600;">Producto</th>
-                    <th style="padding:16px 15px; text-align:center; font-weight:600;">Cant.</th>
-                    <th style="padding:16px 15px; text-align:right; font-weight:600;">Precio Unit.</th>
-                    <th style="padding:16px 15px; text-align:right; font-weight:600;">Total</th>
+                    <th style="padding:14px 12px; text-align:left;">Producto</th>
+                    <th style="padding:14px 12px; text-align:center;">Cant.</th>
+                    <th style="padding:14px 12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:14px 12px; text-align:right;">Total</th>
                 </tr>
             </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
 
-        <!-- Totals -->
-        <div style="text-align:right; margin-top:45px;">
-            <table style="margin-left:auto; width:420px; font-size:17.5px;">
-                <tr><td style="padding:10px 0;">Subtotal:</td><td style="padding:10px 0; text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
-                <tr><td style="padding:10px 0;">IVA (${ivaRate}%):</td><td style="padding:10px 0; text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
-                <tr style="font-size:28px; font-weight:700; color:#1976d2; border-top:5px double #1976d2;">
-                    <td style="padding:22px 0;">TOTAL A PAGAR</td>
-                    <td style="padding:22px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+        <div style="text-align:right; margin-top:35px;">
+            <table style="margin-left:auto; width:380px; font-size:16.5px;">
+                <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:24px; font-weight:bold; color:#1976d2; border-top:4px double #1976d2;">
+                    <td style="padding:16px 0;">TOTAL A PAGAR</td>
+                    <td style="padding:16px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
 
-        <!-- Footer -->
-        <div style="text-align:center; margin-top:70px; color:#555; font-size:16px;">
+        <div style="text-align:center; margin-top:50px; color:#555; font-size:15px;">
             Gracias por su compra 🛠️ • ¡Vuelva pronto a Dinamo Tools Sales & Service!
         </div>
     </div>`;
@@ -752,41 +746,7 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
 }
 
-// ================== PDF DOWNLOAD WITH ADVANCED SETTINGS ==================
-function downloadPDF() {
-    const element = document.getElementById('bill');
-    if (!element || !element.innerHTML.trim()) {
-        return alert("❌ Please generate the invoice first!");
-    }
-
-    const opt = {
-        margin: [25, 20, 25, 20],
-        filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2.2,
-            useCORS: true,
-            allowTaint: false,
-            letterRendering: true,
-            scrollX: 0,
-            scrollY: 0
-        },
-        jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait'
-        }
-    };
-
-    setTimeout(() => {
-        html2pdf().set(opt).from(element).save()
-            .catch(err => {
-                console.error(err);
-                alert("PDF generated. If logo or content is missing, try regenerating the invoice.");
-            });
-    }, 800);
-}
-
+// ================== FIXED SINGLE PAGE PRINT ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -797,16 +757,57 @@ function printBill() {
         <head>
             <title>Factura - Dinamo Tools Sales & Service</title>
             <style>
-                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; margin: 0; }
-                img { max-height: 140px; }
+                @page { size: A4; margin: 15mm; }
+                body { 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    padding: 0; 
+                    margin: 0; 
+                }
+                #invoiceContent { 
+                    max-width: 100%; 
+                    margin: 0 auto; 
+                }
+                img { max-height: 110px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 12px 10px; border: 1px solid #ddd; }
+                th { background: #1976d2; color: white; }
             </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 800);">
+        <body onload="window.print(); setTimeout(() => window.close(), 1000);">
             ${bill.innerHTML}
         </body>
         </html>
     `);
     printWindow.document.close();
+}
+
+// ================== PDF DOWNLOAD ==================
+function downloadPDF() {
+    const element = document.getElementById('bill');
+    if (!element || !element.innerHTML.trim()) {
+        return alert("❌ Please generate the invoice first!");
+    }
+
+    const opt = {
+        margin: [20, 20, 20, 20],
+        filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            letterRendering: true
+        },
+        jsPDF: {
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait'
+        }
+    };
+
+    setTimeout(() => {
+        html2pdf().set(opt).from(element).save();
+    }, 600);
 }
 
 function clearCart() {
