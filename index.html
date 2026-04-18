@@ -133,13 +133,13 @@
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
         <p class="scanner-note">⚠️ Important: Must be opened with HTTPS (not file://). Best on mobile.</p>
-       
+      
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
             <button id="flashBtn" class="flash-btn" onclick="toggleFlashlight()" style="display:none;">🔦 Flashlight OFF</button>
             <button onclick="initScanner()" style="padding:10px 20px; background:#4caf50;">🔄 Start / Retry Camera</button>
         </div>
-       
+      
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
     </div>
 
@@ -155,18 +155,18 @@
             <input id="pqty" type="number" placeholder="Current Stock" style="flex:1;">
             <input id="pminstock" type="number" value="5" placeholder="Minimum Stock Alert" style="flex:1;">
         </div>
-      
+     
         <label style="display:block;margin:12px 0 6px 0;font-weight:600;">📸 Product Image (optional)</label>
         <div style="display:flex; gap:10px; margin-bottom:12px;">
             <button type="button" onclick="uploadFromFile()" style="flex:1; padding:14px; background:#4caf50;">📤 Upload from Gallery</button>
             <button type="button" onclick="captureProductPhoto()" style="flex:1; padding:14px;">📸 Take Photo</button>
         </div>
-      
+     
         <input type="file" id="pimage" accept="image/*" style="display:none;">
         <div id="imagePreview" style="margin:10px 0;text-align:center;"></div>
-      
+     
         <div id="verificationBox" style="display:none; background:#e8f5e9; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;"></div>
-      
+     
         <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
     </div>
 
@@ -194,16 +194,16 @@
             📱 SCAN TO ADD TO INVOICE
         </button>
         <div id="results"></div>
-    
+   
         <div style="display: flex; gap: 10px; margin:10px 0;">
             <input id="customerName" placeholder="Customer Name (Optional)" style="flex:1;">
             <input id="customerId" placeholder="Customer ID / NIT" style="flex:1;">
         </div>
-    
+   
         <table class="table" id="cartTable">
             <tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
         </table>
-   
+  
         <button onclick="generateBill()" class="success-btn" style="margin-top:15px; width:100%; padding:14px; font-size:17px;">
             Generate Sales Invoice
         </button>
@@ -225,7 +225,7 @@
 <!-- CONFIG MODAL -->
 <div id="configModal" class="modal">
     <div class="modal-content">
-        <h3>⚙️ Store & Tax Configuration 
+        <h3>⚙️ Store & Tax Configuration
             <span onclick="closeConfigModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
         <input id="logoUrl" placeholder="Logo Image URL" value="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/icon.png?raw=true">
@@ -252,7 +252,6 @@ const firebaseConfig = {
   messagingSenderId: "266478900382",
   appId: "1:266478900382:web:321b8f26235e8395e2578f"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
@@ -287,11 +286,9 @@ function openConfigModal() {
     document.getElementById('city').value = storeConfig.city || '';
     document.getElementById('ivaRate').value = storeConfig.ivaRate || 19;
 }
-
 function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
 }
-
 function saveConfig() {
     storeConfig.logoUrl = document.getElementById('logoUrl').value.trim() || storeConfig.logoUrl;
     storeConfig.businessName = document.getElementById('businessName').value.trim() || "Tool Store Colombia";
@@ -301,7 +298,6 @@ function saveConfig() {
     storeConfig.mobile = document.getElementById('mobile').value.trim();
     storeConfig.city = document.getElementById('city').value.trim();
     storeConfig.ivaRate = parseFloat(document.getElementById('ivaRate').value) || 19;
-
     db.ref('storeConfig').set(storeConfig)
         .then(() => alert("✅ Configuration saved successfully!"))
         .catch(err => alert("Error: " + err.message));
@@ -313,7 +309,6 @@ function loadData() {
     db.ref('storeConfig').once('value', snap => {
         if (snap.val()) storeConfig = { ...storeConfig, ...snap.val() };
     });
-
     db.ref('products').on('value', (snap) => {
         products = snap.val() ? Object.values(snap.val()) : [];
         products.forEach(p => {
@@ -325,18 +320,14 @@ function loadData() {
     });
 }
 
-// ================== IMPROVED SCANNER ==================
-// ================== IMPROVED SCANNER WITH BETTER FOCUS & DETECTION ==================
+// ================== IMPROVED SCANNER (Fixed - No more NotFoundError) ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
 
-    // Pause scanning briefly after success to avoid duplicate reads
     if (html5QrCode) {
         html5QrCode.pause(true);
-        setTimeout(() => {
-            if (html5QrCode) html5QrCode.resume();
-        }, 1200);
+        setTimeout(() => { if (html5QrCode) html5QrCode.resume(); }, 1200);
     }
 
     if (scanMode === 'addToBill') {
@@ -372,79 +363,67 @@ function handleScannedCode(decodedText) {
 
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
-    statusEl.textContent = "Requesting camera...";
+    statusEl.textContent = "Requesting camera access...";
     statusEl.style.color = "#1976d2";
 
     if (html5QrCode) {
         await html5QrCode.stop().catch(() => {});
+        html5QrCode = null;
     }
 
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 18, // 🔥 Faster detection (recommended 10–20)
-        
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-            // 🔥 Dynamic smart scan area
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-
-            return {
-                width: minEdge * 0.9,   // large detection area
-                height: minEdge * 0.45  // 🔥 rectangular → BEST for barcodes
-            };
-        },
-
-        aspectRatio: 1.777, // 16:9 for better camera focus
+        fps: 15,
+        qrbox: (viewfinderWidth, viewfinderHeight) => ({
+            width: Math.min(viewfinderWidth, viewfinderHeight) * 0.88,
+            height: Math.min(viewfinderWidth, viewfinderHeight) * 0.45
+        }),
+        aspectRatio: 1.777,
         disableFlip: false,
-
-        experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true // 🔥 BIG upgrade
-        },
-
-        videoConstraints: {
-            facingMode: { exact: "environment" }, // 🔥 force back camera
-
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-
-            focusMode: "continuous",   // 🔥 autofocus
-            advanced: [
-                { focusMode: "continuous" },
-                { exposureMode: "continuous" },
-                { whiteBalanceMode: "continuous" }
-            ]
-        }
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
 
     try {
+        // Prefer back camera, but don't force it
         await html5QrCode.start(
-            { facingMode: "environment" }, // fallback if exact fails
+            { facingMode: "environment" },
             config,
             handleScannedCode,
             () => {}
         );
-
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "📷 Ultra-fast scanner ready — steady camera for best results";
-
+        statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
-
     } catch (err) {
-        console.error("Scanner error:", err);
+        console.warn("Back camera failed, trying any camera...", err);
 
-        let msg = "❌ Camera error: ";
-        if (err.name === "NotAllowedError") msg += "Allow camera permission.";
-        else if (err.name === "NotFoundError") msg += "No camera found.";
-        else if (location.protocol !== "https:") msg += "Use HTTPS.";
-        else msg += err.message || "Unknown error.";
+        try {
+            // Fallback to any available camera (front or back)
+            await html5QrCode.start(
+                true,  // Use default camera
+                config,
+                handleScannedCode,
+                () => {}
+            );
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = "✅ Scanner started (using available camera)";
+            document.getElementById('flashBtn').style.display = 'inline-block';
+        } catch (fallbackErr) {
+            console.error("Scanner fallback also failed:", fallbackErr);
+            let msg = "❌ Camera not found or access denied.<br>";
+            if (location.protocol !== "https:") msg += "Please open this page using HTTPS.<br>";
+            msg += "Make sure camera permission is allowed.";
 
-        statusEl.style.color = "#d32f2f";
-        statusEl.innerHTML = `${msg}<br><br>
-            <button onclick="initScanner()" style="padding:10px 20px;">
-                Retry Camera
-            </button>`;
+            statusEl.style.color = "#d32f2f";
+            statusEl.innerHTML = `${msg}<br><br>
+                <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px; cursor:pointer;">
+                    🔄 Retry Camera
+                </button>`;
+        }
     }
 }
+
 async function toggleFlashlight() {
     if (!html5QrCode) return;
     const btn = document.getElementById('flashBtn');
@@ -462,15 +441,12 @@ async function toggleFlashlight() {
 function startFileScan() {
     document.getElementById('fileInput').click();
 }
-
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Processing image...";
     statusEl.style.color = "#1976d2";
-
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-
     html5QrCode.scanFile(e.target.files[0], true)
         .then(decodedText => handleScannedCode(decodedText))
         .catch(() => {
@@ -553,7 +529,7 @@ function renderProductList(filtered = products) {
         const isLow = (p.qty || 0) < (p.minStock || 5);
         const div = document.createElement('div');
         div.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid #eee; ${isLow ? 'background:#ffebee;' : ''}`;
-       
+      
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px;">
                 ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : `<div style="width:60px;height:60px;background:#eee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">No Img</div>`}
@@ -607,7 +583,6 @@ function editProduct(code) {
     document.getElementById('pcost').value = p.cost || '';
     document.getElementById('pqty').value = p.qty || '';
     document.getElementById('pminstock').value = p.minStock || 5;
-
     const preview = document.getElementById('imagePreview');
     preview.innerHTML = p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` : '';
     editMode = code;
@@ -615,12 +590,8 @@ function editProduct(code) {
 
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
-
-    if (!code) {
-        alert("❌ Barcode/Code is required!");
-        return;
-    }
-
+    if (!code) return alert("❌ Barcode/Code is required!");
+    
     const name = document.getElementById('pname').value.trim() || "Unnamed Product";
     const price = parseFloat(document.getElementById('pprice').value) || 0;
     const cost = parseFloat(document.getElementById('pcost').value) || 0;
@@ -628,24 +599,11 @@ async function saveProduct() {
     const minStock = parseInt(document.getElementById('pminstock').value) || 5;
     const cat = document.getElementById('pcat').value.trim();
 
-    let product = {
-        name,
-        code,
-        cat,
-        price,
-        cost,
-        qty,
-        minStock,
-        imageUrl: ''
-    };
+    let product = { name, code, cat, price, cost, qty, minStock, imageUrl: '' };
 
-    // 🔥 Keep existing image if already present
     const existing = products.find(p => p.code === code);
-    if (existing && existing.imageUrl) {
-        product.imageUrl = existing.imageUrl;
-    }
+    if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
 
-    // 🔥 Upload image if new file selected
     const file = document.getElementById('pimage').files[0];
     if (file) {
         try {
@@ -653,51 +611,22 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            console.error("❌ Image upload error:", err);
-            alert("⚠️ Image upload failed, saving product without image.");
+            alert("⚠️ Image upload failed. Saving without image.");
         }
     }
 
     try {
-        // ✅ CORRECT Firebase write path
-        const ref = db.ref('products').child(code);
-
-        // 🔥 SAVE TO FIREBASE
-        await ref.set(product);  // overwrites safely :contentReference[oaicite:0]{index=0}
-
-        console.log("✅ Product saved to Firebase:", product);
-
-        // ✅ FORCE SUCCESS MESSAGE
-        alert("✅ Product saved to cloud successfully!");
-
-        // ✅ SHOW UI VERIFICATION
+        await db.ref('products/' + code).set(product);
+        alert("✅ Product saved successfully!");
         showVerification(!!editMode);
-
-        // RESET EDIT MODE
         editMode = null;
 
-        // 🔥 FORCE REFRESH FROM CLOUD
         const snap = await db.ref('products').once('value');
         products = snap.val() ? Object.values(snap.val()) : [];
-
-        products.forEach(p => {
-            p.minStock = p.minStock || 5;
-            p.qty = p.qty || 0;
-        });
-
         renderProductList();
         updateInventorySummary();
-
-        console.log("✅ Data refreshed from Firebase");
-
     } catch (err) {
-        console.error("❌ Firebase save failed:", err);
-
-        alert(
-            "❌ Failed to save product!\n\n" +
-            "Reason: " + err.message +
-            "\n\nCheck:\n- Internet\n- Firebase rules\n- Console (F12)"
-        );
+        alert("❌ Failed to save product: " + err.message);
     }
 }
 
@@ -712,7 +641,6 @@ function showVerification(isUpdate) {
     ver.style.display = 'block';
     setTimeout(() => ver.style.display = 'none', 8000);
 
-    // Clear form
     document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
     document.getElementById('pimage').value = '';
     document.getElementById('imagePreview').innerHTML = '';
@@ -758,7 +686,6 @@ function updateInventorySummary() {
     const totalProducts = products.length;
     const lowStock = products.filter(p => (p.qty || 0) < (p.minStock || 5)).length;
     const stockValue = products.reduce((sum, p) => sum + ((p.qty || 0) * (p.cost || 0)), 0);
-
     document.getElementById('inventorySummary').innerHTML = `
         <div style="background:#e8f5e9;padding:15px;border-radius:10px;text-align:center;">
             <strong>Total Products</strong><br><span style="font-size:28px;color:#2e7d32;">${totalProducts}</span>
@@ -772,59 +699,82 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== BILLING ==================
+// ================== BILLING & PDF ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
     let subtotal = 0;
     let itemsHTML = '';
+
     cart.forEach(item => {
         const amount = item.qty * (item.price || 0);
         subtotal += amount;
-        itemsHTML += `<tr>
-            <td>${item.name}</td>
-            <td style="text-align:center;">${item.qty}</td>
-            <td style="text-align:right;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-            <td style="text-align:right;">$${amount.toLocaleString('es-CO')}</td>
-        </tr>`;
+        itemsHTML += `
+            <tr>
+                <td style="padding:10px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:10px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:10px; text-align:right; border-bottom:1px solid #ddd;">$${amount.toLocaleString('es-CO')}</td>
+            </tr>`;
     });
 
     const ivaRate = storeConfig.ivaRate || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
+
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    const currentDate = new Date().toLocaleString('es-CO', { 
+        timeZone: 'America/Bogota',
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
 
     const billHTML = `
-    <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;padding:20px;border:2px solid #1976d2;border-radius:10px;background:#fff;">
-        <div style="text-align:center;margin-bottom:20px;">
-            <img src="${storeConfig.logoUrl}" alt="Logo" style="max-width:250px;height:auto;">
-            <h1 style="margin:10px 0 5px;color:#1976d2;">${storeConfig.businessName}</h1>
-            <p style="margin:0;font-size:14px;">${storeConfig.address}<br>NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>${storeConfig.city} | ${storeConfig.email}</p>
+    <div style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
+        <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
+            ${storeConfig.logoUrl ? `<img src="${storeConfig.logoUrl}" alt="Logo" style="max-width:180px; height:auto; margin-bottom:12px;">` : ''}
+            <h1 style="margin:8px 0 5px; color:#1976d2; font-size:28px;">${storeConfig.businessName}</h1>
+            <p style="margin:0; font-size:15px;">
+                ${storeConfig.address}<br>
+                NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
+                ${storeConfig.city} • ${storeConfig.email}
+            </p>
         </div>
-        <hr style="border:1px solid #1976d2;">
-        <div style="display:flex;justify-content:space-between;margin:20px 0;">
+
+        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
             <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
-            <div style="text-align:right;"><strong>Cliente:</strong> ${customer}<br>${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}</div>
+            <div style="text-align:right;">
+                <strong>Cliente:</strong> ${customer}<br>
+                ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
+            </div>
         </div>
-        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-            <thead><tr style="background:#f4f6f9;">
-                <th style="border:1px solid #ddd;padding:10px;text-align:left;">Producto</th>
-                <th style="border:1px solid #ddd;padding:10px;text-align:center;">Cant.</th>
-                <th style="border:1px solid #ddd;padding:10px;text-align:right;">Precio</th>
-                <th style="border:1px solid #ddd;padding:10px;text-align:right;">Total</th>
-            </tr></thead>
+
+        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15px;">
+            <thead>
+                <tr style="background:#1976d2; color:white;">
+                    <th style="padding:12px 10px; text-align:left;">Producto</th>
+                    <th style="padding:12px 10px; text-align:center;">Cant.</th>
+                    <th style="padding:12px 10px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:12px 10px; text-align:right;">Total</th>
+                </tr>
+            </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
-        <div style="text-align:right;font-size:16px;line-height:1.8;">
-            <p><strong>Subtotal:</strong> $${subtotal.toLocaleString('es-CO')}</p>
-            <p><strong>IVA (${ivaRate}%):</strong> $${ivaAmount.toLocaleString('es-CO')}</p>
-            <p style="font-size:22px;color:#1976d2;margin-top:10px;"><strong>Total:</strong> $${grandTotal.toLocaleString('es-CO')}</p>
+
+        <div style="text-align:right; margin-top:30px; font-size:16px;">
+            <table style="width:100%; max-width:400px; margin-left:auto;">
+                <tr><td style="padding:8px 0; text-align:right;">Subtotal:</td><td style="padding:8px 0; text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td style="padding:8px 0; text-align:right;">IVA (${ivaRate}%):</td><td style="padding:8px 0; text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="border-top:3px double #1976d2; font-size:20px; font-weight:bold; color:#1976d2;">
+                    <td style="padding:12px 0; text-align:right;">TOTAL A PAGAR:</td>
+                    <td style="padding:12px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+                </tr>
+            </table>
         </div>
-        <hr style="border:1px solid #1976d2;">
-        <div style="text-align:center;margin-top:25px;font-size:13px;color:#555;">Gracias por su compra 🛠️</div>
+
+        <div style="text-align:center; margin-top:40px; font-size:14px; color:#555;">Gracias por su compra 🛠️ • ¡Vuelva pronto!</div>
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
@@ -836,24 +786,26 @@ function generateBill() {
     });
 }
 
+function downloadPDF() {
+    const element = document.getElementById('bill');
+    if (!element.innerHTML.trim()) return alert("Generate invoice first!");
+
+    const opt = {
+        margin: [15, 15, 15, 15],
+        filename: `Factura_ToolStore_${new Date().toISOString().slice(0,10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+}
+
 function clearCart() {
     if (confirm("Clear cart?")) {
         cart = [];
         renderCart();
     }
-}
-
-function downloadPDF() {
-    const element = document.getElementById('bill');
-    if (!element.innerHTML) return alert("Generate invoice first!");
-    const opt = {
-        margin: 10,
-        filename: 'Tool_Store_Invoice.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(element).save();
 }
 
 function printBill() {
