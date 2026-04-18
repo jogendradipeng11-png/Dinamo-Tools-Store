@@ -826,31 +826,29 @@ function PrintInvoice() {
     printWindow.document.close();
 }
 
+// ================== IMPROVED THERMAL BILL PRINTING ==================
 function printThermalBill() {
     const billElement = document.getElementById('bill');
+    
     if (!billElement || !billElement.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    // Extract data from the generated bill (more reliable than parsing HTML)
-    const invoiceId = document.querySelector('#bill strong') ? 
-                      Array.from(document.querySelectorAll('#bill strong'))
-                           .find(el => el.textContent.includes('Factura No'))?.nextSibling?.textContent?.trim() || 'INV-XXXXXX' : 'INV-XXXXXX';
+    // Use lastInvoiceCart (saved before clearing cart)
+    const itemsToPrint = lastInvoiceCart.length > 0 ? lastInvoiceCart : cart;
 
-    const dateText = document.querySelector('#bill strong') ? 
-                     Array.from(document.querySelectorAll('#bill strong'))
-                          .find(el => el.textContent.includes('Fecha'))?.nextSibling?.textContent?.trim() || '' : '';
+    if (itemsToPrint.length === 0) {
+        return alert("❌ No items found in the invoice!");
+    }
 
-    // Get customer info
-    const customerEl = document.querySelector('#bill strong') ? 
-                       Array.from(document.querySelectorAll('#bill strong'))
-                            .find(el => el.textContent.includes('Cliente')) : null;
-    const customerName = customerEl ? customerEl.nextSibling?.textContent?.trim() || 'Cliente General' : 'Cliente General';
-
-    // Build clean thermal receipt
+    // Calculate totals
+    let subtotal = 0;
     let itemsHTML = '';
-    cart.length > 0 ? cart.forEach(item => {   // Use last cart data if available, fallback to bill
-        const amount = item.qty * (item.price || 0);
+
+    itemsToPrint.forEach(item => {
+        const amount = item.qty * (parseFloat(item.price) || 0);
+        subtotal += amount;
+
         itemsHTML += `
             <tr>
                 <td class="item-name">${item.name}</td>
@@ -858,19 +856,31 @@ function printThermalBill() {
                 <td class="price">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
                 <td class="amount">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
-    }) : '';
+    });
 
-    // Calculate totals from current cart or last invoice
-    let subtotal = 0;
-    if (cart.length > 0) {
-        subtotal = cart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
-    } else {
-        // Fallback: try to parse from bill (less accurate)
-        subtotal = 0; // You can improve this later
-    }
     const ivaRate = storeConfig.ivaRate || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
+
+    // Get invoice details from the displayed bill
+    let invoiceId = "INV-XXXXXX";
+    let invoiceDate = new Date().toLocaleDateString('es-CO');
+    let customerName = "Cliente General";
+
+    // Try to extract from the bill display
+    const billText = billElement.innerText || '';
+    if (billText.includes('Factura No:')) {
+        const match = billText.match(/Factura No:\s*(INV-\d+)/);
+        if (match) invoiceId = match[1];
+    }
+    if (billText.includes('Fecha:')) {
+        const dateMatch = billText.match(/Fecha:\s*([^\n]+)/);
+        if (dateMatch) invoiceDate = dateMatch[1].trim();
+    }
+    if (billText.includes('Cliente:')) {
+        const custMatch = billText.match(/Cliente:\s*([^\n]+)/);
+        if (custMatch) customerName = custMatch[1].trim();
+    }
 
     const thermalHTML = `
     <!DOCTYPE html>
@@ -886,20 +896,16 @@ function printThermalBill() {
                 font-family: monospace;
                 width: 72mm;
                 margin: 0 auto;
-                padding: 4mm 3mm;
+                padding: 5mm 4mm;
                 font-size: 13px;
-                line-height: 1.4;
+                line-height: 1.45;
                 color: #000;
                 background: white;
             }
-            .receipt {
-                width: 100%;
-            }
-            .centered {
-                text-align: center;
-            }
+            .receipt { width: 100%; }
+            .centered { text-align: center; }
             .header h1 {
-                font-size: 18px;
+                font-size: 17px;
                 margin: 6px 0 4px 0;
                 font-weight: bold;
             }
@@ -918,7 +924,7 @@ function printThermalBill() {
             }
             th {
                 border-bottom: 1px dashed #000;
-                padding: 4px 0 6px 0;
+                padding: 5px 0 6px 0;
                 text-align: left;
                 font-weight: bold;
             }
@@ -926,18 +932,15 @@ function printThermalBill() {
                 padding: 4px 2px;
                 vertical-align: top;
             }
-            .item-name { width: 48%; word-break: break-word; }
+            .item-name { width: 48%; word-break: break-all; }
             .qty { width: 12%; text-align: center; }
             .price { width: 18%; text-align: right; }
             .amount { width: 22%; text-align: right; }
-            .totals {
-                margin-top: 12px;
-            }
+            .totals { margin-top: 12px; }
             .total-line {
                 display: flex;
                 justify-content: space-between;
-                margin: 3px 0;
-                font-size: 13.5px;
+                margin: 4px 0;
             }
             .grand-total {
                 font-size: 15px;
@@ -958,17 +961,17 @@ function printThermalBill() {
         <div class="receipt">
             <div class="header centered">
                 <h1>${storeConfig.businessName}</h1>
-                <p>${storeConfig.address}</p>
-                <p>NIT: ${storeConfig.nit}</p>
-                <p>Tel: ${storeConfig.mobile}</p>
-                <p>${storeConfig.city}</p>
+                <p>${storeConfig.address || ''}</p>
+                <p>NIT: ${storeConfig.nit || ''}</p>
+                <p>Tel: ${storeConfig.mobile || ''}</p>
+                <p>${storeConfig.city || ''}</p>
             </div>
 
             <div class="divider"></div>
 
-            <div style="display:flex; justify-content:space-between; font-size:13px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
                 <div><strong>Factura No:</strong> ${invoiceId}</div>
-                <div style="text-align:right;">${dateText || new Date().toLocaleDateString('es-CO')}</div>
+                <div>${invoiceDate}</div>
             </div>
             <div><strong>Cliente:</strong> ${customerName}</div>
 
@@ -984,7 +987,7 @@ function printThermalBill() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${itemsHTML || '<tr><td colspan="4" style="text-align:center; padding:10px;">No items</td></tr>'}
+                    ${itemsHTML}
                 </tbody>
             </table>
 
@@ -1000,7 +1003,7 @@ function printThermalBill() {
                     <span>$${ivaAmount.toLocaleString('es-CO')}</span>
                 </div>
                 <div class="total-line grand-total">
-                    <span>TOTAL A PAGAR</span>
+                    <span>TOTAL:</span>
                     <span>$${grandTotal.toLocaleString('es-CO')}</span>
                 </div>
             </div>
@@ -1015,18 +1018,19 @@ function printThermalBill() {
 
         <script>
             window.onload = function() {
-                setTimeout(() => {
-                    window.print();
-                    // Optional: window.close(); after printing (uncomment if desired)
-                }, 800);
+                setTimeout(() => window.print(), 600);
             };
         <\/script>
     </body>
     </html>`;
 
     const thermalWindow = window.open('', '_blank');
-    thermalWindow.document.write(thermalHTML);
-    thermalWindow.document.close();
+    if (thermalWindow) {
+        thermalWindow.document.write(thermalHTML);
+        thermalWindow.document.close();
+    } else {
+        alert("❌ Popup blocked! Please allow popups for this site.");
+    }
 }
 
 function clearCart() {
