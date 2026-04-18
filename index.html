@@ -647,10 +647,10 @@ async function generateBill() {
     const billHTML = `
     <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
         <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" crossorigin="anonymous" loading="eager"
-             style="max-height:110px; width:auto; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;"
-             alt="Dinamo Tools Sales & Service">
+            
+            <!-- Logo commented out to fix PDF download error (CORS issue) -->
             <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
+            
             <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
@@ -731,22 +731,18 @@ async function downloadPDF() {
     }
 
     try {
-        // Wait for GitHub logo to fully load
-        await new Promise(r => setTimeout(r, 1500));
+        // Give time for base64 logo to render
+        await new Promise(r => setTimeout(r, 800));
 
         const canvas = await html2canvas(element, {
-            scale: 2.2,
-            useCORS: true,
+            scale: 2.5,           // High quality
+            useCORS: false,       // No need anymore with base64
             allowTaint: true,
             backgroundColor: "#ffffff",
-            logging: false,
-            onclone: (clonedDoc) => {
-                const logo = clonedDoc.querySelector('img[alt="Dinamo Tools Sales & Service"]');
-                if (logo) logo.crossOrigin = "anonymous";
-            }
+            logging: false
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.93);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -756,11 +752,11 @@ async function downloadPDF() {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
 
-        alert("✅ PDF downloaded successfully with logo!");
+        alert("✅ PDF downloaded successfully!");
 
     } catch (err) {
         console.error("PDF Error:", err);
-        alert("❌ PDF still failed.\n\nPlease try:\n1. 'Print Invoice' button\n2. Refresh the page and generate invoice again.");
+        alert("❌ PDF generation failed.\n\nTry 'Print Invoice' button for now.");
     }
 }
 function PrintInvoice() {
