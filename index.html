@@ -848,32 +848,34 @@ function printThermalBill() {
                     font-family: 'Segoe UI', Arial, monospace; 
                     width: 76mm; 
                     margin: 0 auto; 
-                    padding: 8mm 2mm; 
+                    padding: 8mm 3mm; 
                     font-size: 12px; 
-                    line-height: 1.35; 
+                    line-height: 1.4; 
                     color: #000; 
                     background: #fff;
                 }
-                .thermal-container {
-                    border: 2px solid #1976d2;
-                    border-radius: 8px;
-                    padding: 10px 8px;
+                .thermal-box {
+                    border: 3px solid #1976d2;
+                    border-radius: 10px;
+                    padding: 12px 8px 15px 8px;
                     width: 100%;
                     box-sizing: border-box;
+                    overflow: hidden;
                 }
                 .header { 
                     text-align: center; 
                     margin-bottom: 12px; 
                 }
                 .header h1 { 
-                    font-size: 15px; 
-                    margin: 5px 0 3px 0; 
+                    font-size: 16px; 
+                    margin: 4px 0 6px 0; 
                     font-weight: bold; 
                     color: #1976d2;
                 }
                 .header p { 
                     margin: 2px 0; 
                     font-size: 11px; 
+                    line-height: 1.3;
                 }
                 table { 
                     width: 100%; 
@@ -882,56 +884,66 @@ function printThermalBill() {
                     font-size: 12px; 
                 }
                 th, td { 
-                    padding: 5px 4px; 
+                    padding: 6px 4px; 
                     text-align: left; 
                     vertical-align: top; 
                 }
                 th { 
-                    border-bottom: 1px dashed #000; 
-                    font-weight: bold; 
+                    background: #1976d2; 
+                    color: white; 
+                    border-bottom: 2px solid #1976d2;
                 }
-                .item-name { width: 52%; word-break: break-word; }
-                .qty { width: 12%; text-align: center; }
-                .price { width: 18%; text-align: right; }
-                .amount { width: 18%; text-align: right; }
-                
-                .totals { 
-                    margin-top: 15px; 
-                    border-top: 1px dashed #000; 
-                    padding-top: 8px; 
+                .item-name { 
+                    width: 48%; 
+                    word-break: break-all; 
+                    white-space: normal;
                 }
-                .total-line { 
-                    display: flex; 
-                    justify-content: space-between; 
-                    margin: 4px 0; 
-                    font-size: 12px; 
+                .qty { 
+                    width: 12%; 
+                    text-align: center; 
                 }
-                .grand-total { 
-                    font-size: 15px; 
-                    font-weight: bold; 
+                .price { 
+                    width: 20%; 
+                    text-align: right; 
+                }
+                .amount { 
+                    width: 20%; 
+                    text-align: right; 
+                }
+                .totals-table {
+                    width: 100%;
+                    margin-top: 15px;
+                }
+                .totals-table td {
+                    padding: 4px 6px;
+                }
+                .right { text-align: right; }
+                .grand-total {
+                    font-size: 15px;
+                    font-weight: bold;
                     color: #1976d2;
-                    border-top: 2px solid #1976d2; 
-                    padding-top: 8px; 
-                    margin-top: 8px; 
+                    border-top: 2px solid #1976d2;
+                    padding-top: 8px;
+                    margin-top: 8px;
                 }
                 .footer { 
                     text-align: center; 
-                    margin-top: 18px; 
+                    margin-top: 20px; 
                     font-size: 11px; 
+                    line-height: 1.4;
                 }
-                .centered { text-align: center; }
             </style>
         </head>
         <body>
-            <div class="thermal-container">
+            <div class="thermal-box">
                 ${bill.innerHTML}
             </div>
-            
+
             <script>
                 window.onload = function() {
                     setTimeout(() => {
                         window.print();
-                    }, 700);
+                    }, 800);
                 };
             <\/script>
         </body>
