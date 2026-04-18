@@ -651,21 +651,21 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== GENERATE BILL ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
     let subtotal = 0;
     let itemsHTML = '';
+
     cart.forEach(item => {
         const amount = item.qty * (item.price || 0);
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:12px 15px; border-bottom:1px solid #ddd;">${item.name}</td>
-                <td style="padding:12px 15px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:14px 12px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:14px 12px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -673,62 +673,65 @@ async function generateBill() {
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const currentDate = new Date().toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
 
-    let logoSrc = storeConfig.logoUrl;
-    try {
-        logoSrc = await getLogoBase64(storeConfig.logoUrl);
-    } catch(e) { console.warn("Logo fallback used"); }
+    const logoSrc = storeConfig.logoUrl;
 
     const billHTML = `
-    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#fff; padding:25px; border:4px solid #1976d2; border-radius:15px; font-family:Arial,sans-serif;">
-        <div style="text-align:center; margin-bottom:20px;">
-            <img src="${logoSrc}" alt="Dinamo Tools" style="max-height:100px; margin-bottom:10px;">
-            <h1 style="margin:10px 0; color:#1976d2;">${storeConfig.businessName}</h1>
-            <p style="margin:5px 0; font-size:15px;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:25px;">
+            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:110px; margin-bottom:15px; display:block; margin-left:auto; margin-right:auto;">
+            <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:0; font-size:15px; color:#444;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
-        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
-            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-size:15px;">
+            <div>
+                <strong style="color:#1976d2;">Factura No:</strong> ${invoiceId}<br>
+                <strong style="color:#1976d2;">Fecha:</strong> ${currentDate}
+            </div>
             <div style="text-align:right;">
                 <strong>Cliente:</strong> ${customer}<br>
-                ${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}
+                ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
             </div>
         </div>
-        <table style="width:100%; border-collapse:collapse; margin:20px 0;">
+        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15.5px;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
-                    <th style="padding:12px; text-align:left;">Producto</th>
-                    <th style="padding:12px; text-align:center;">Cant.</th>
-                    <th style="padding:12px; text-align:right;">Precio Unit.</th>
-                    <th style="padding:12px; text-align:right;">Total</th>
+                    <th style="padding:14px 12px; text-align:left;">Producto</th>
+                    <th style="padding:14px 12px; text-align:center;">Cant.</th>
+                    <th style="padding:14px 12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:14px 12px; text-align:right;">Total</th>
                 </tr>
             </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
-        <div style="text-align:right; margin-top:30px;">
-            <table style="margin-left:auto; font-size:16px;">
-                <tr><td>Subtotal:</td><td style="padding-left:40px;">$${subtotal.toLocaleString('es-CO')}</td></tr>
-                <tr><td>IVA (${ivaRate}%):</td><td style="padding-left:40px;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
-                <tr style="font-size:23px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
-                    <td>TOTAL A PAGAR:</td>
-                    <td style="padding-left:40px;">$${grandTotal.toLocaleString('es-CO')}</td>
+        <div style="text-align:right; margin-top:35px;">
+            <table style="margin-left:auto; width:380px; font-size:16.5px;">
+                <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:24px; font-weight:bold; color:#1976d2; border-top:4px double #1976d2;">
+                    <td style="padding:16px 0;">TOTAL A PAGAR</td>
+                    <td style="padding:16px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
-        <div style="text-align:center; margin-top:40px; color:#555;">
-            Gracias por su compra 🛠️ • ¡Vuelva pronto a Dinamo Tools Sales & Service!
+        <div style="text-align:center; margin-top:50px; color:#555; font-size:15px;">
+            Gracias por su compra 🛠️ • ¡Vuelva pronto a ${storeConfig.businessName}!
         </div>
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
 }
-
 // ================== DOWNLOAD PDF (Guaranteed Working) ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
@@ -763,23 +766,74 @@ function downloadPDF() {
 // ================== PRINT & WHATSAPP ==================
 function printBill() {
     const bill = document.getElementById('bill');
-    if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
     
+    if (!bill.innerHTML.trim()) {
+        return alert("❌ Please click 'Generate Sales Invoice' first!");
+    }
+
+    // Get the current logo URL from config
+    const logoUrl = storeConfig.logoUrl || "https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true";
+
     const printWindow = window.open('', '_blank');
+
     printWindow.document.write(`
         <html>
         <head>
-            <title>Factura - Dinamo Tools</title>
+            <title>Factura - ${storeConfig.businessName}</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 30px; }
-                #invoiceContent { max-width: 800px; margin: 0 auto; }
+                @page { 
+                    size: A4; 
+                    margin: 15mm; 
+                }
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    padding: 20px;
+                    margin: 0;
+                    background: white;
+                }
+                img.logo-print {
+                    max-height: 110px;
+                    display: block;
+                    margin: 0 auto 15px;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 20px 0;
+                }
+                th, td { 
+                    padding: 12px 10px; 
+                    border: 1px solid #ddd; 
+                    text-align: left;
+                }
+                th { 
+                    background: #1976d2; 
+                    color: white; 
+                    text-align: center;
+                }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
             </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 800);">
+        <body>
             ${bill.innerHTML}
+            
+            <script>
+                // Force logo to load properly in print window
+                window.onload = function() {
+                    const img = document.querySelector('img');
+                    if (img) {
+                        img.src = "${logoUrl}";
+                        img.classList.add('logo-print');
+                    }
+                    window.print();
+                    setTimeout(() => window.close(), 1200);
+                };
+            <\/script>
         </body>
         </html>
     `);
+
     printWindow.document.close();
 }
 
