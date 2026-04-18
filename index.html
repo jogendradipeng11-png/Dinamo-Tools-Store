@@ -6,7 +6,8 @@
     <title>Dinamo Tools Sales & Service - POS</title>
   
     <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -719,59 +720,46 @@ document.getElementById('pdfContainer').innerHTML = billHTML;  // for PDF only
     renderCart();
 }
 
-// ================== PRINT & DOWNLOAD ==================
 async function downloadPDF() {
-    const pdfElement = document.getElementById('pdfContainer');
-   
-    if (!pdfElement || !pdfElement.innerHTML.trim()) {
+    const element = document.getElementById('pdfContainer');
+    if (!element || !element.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
     window.scrollTo(0, 0);
 
-    const opt = {
-        margin: [20, 15, 20, 15],
-        filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
+    try {
+        // Wait longer for logo and rendering
+        await new Promise(r => setTimeout(r, 1000));
+
+        const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
             letterRendering: true,
-            logging: false,
-            scrollY: 0,           // Important fix for blank/offset issues
-            scrollX: 0
-        },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait' 
-        }
-    };
+            scrollY: 0,
+            scrollX: 0,
+            logging: false
+        });
 
-    try {
-        // Longer delay + force image load check
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
 
-        // Extra safety: preload the logo
-        const logoImg = pdfElement.querySelector('img');
-        if (logoImg && logoImg.src) {
-            await new Promise((resolve) => {
-                if (logoImg.complete) resolve();
-                else {
-                    logoImg.onload = resolve;
-                    logoImg.onerror = resolve; // continue even if logo fails
-                }
-            });
-        }
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        await html2pdf().set(opt).from(pdfElement).save();
-        
-        console.log("✅ PDF generated successfully!");
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
 
+        console.log("✅ PDF generated with jsPDF + html2canvas");
     } catch (err) {
-        console.error("PDF Error:", err);
-        alert("❌ Failed to generate PDF.\n\nTry 'Print Invoice' as a workaround.");
+        console.error(err);
+        alert("❌ PDF generation failed. Try Print Invoice instead.");
     }
 }
 function PrintInvoice() {
