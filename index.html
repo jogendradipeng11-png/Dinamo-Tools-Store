@@ -846,25 +846,33 @@ function printThermalBill() {
                 }
                 body { 
                     font-family: 'Segoe UI', Arial, monospace; 
-                    width: 80mm; 
+                    width: 76mm; 
                     margin: 0 auto; 
-                    padding: 8mm 5mm; 
+                    padding: 8mm 2mm; 
                     font-size: 12px; 
-                    line-height: 1.4; 
+                    line-height: 1.35; 
                     color: #000; 
                     background: #fff;
                 }
+                .thermal-container {
+                    border: 2px solid #1976d2;
+                    border-radius: 8px;
+                    padding: 10px 8px;
+                    width: 100%;
+                    box-sizing: border-box;
+                }
                 .header { 
                     text-align: center; 
-                    margin-bottom: 10px; 
+                    margin-bottom: 12px; 
                 }
                 .header h1 { 
-                    font-size: 16px; 
-                    margin: 4px 0; 
+                    font-size: 15px; 
+                    margin: 5px 0 3px 0; 
                     font-weight: bold; 
+                    color: #1976d2;
                 }
                 .header p { 
-                    margin: 3px 0; 
+                    margin: 2px 0; 
                     font-size: 11px; 
                 }
                 table { 
@@ -874,7 +882,7 @@ function printThermalBill() {
                     font-size: 12px; 
                 }
                 th, td { 
-                    padding: 4px 6px; 
+                    padding: 5px 4px; 
                     text-align: left; 
                     vertical-align: top; 
                 }
@@ -882,18 +890,11 @@ function printThermalBill() {
                     border-bottom: 1px dashed #000; 
                     font-weight: bold; 
                 }
-                .item-name { 
-                    width: 55%; 
-                    word-break: break-word; 
-                }
-                .qty { 
-                    width: 12%; 
-                    text-align: center; 
-                }
-                .price, .amount { 
-                    width: 16%; 
-                    text-align: right; 
-                }
+                .item-name { width: 52%; word-break: break-word; }
+                .qty { width: 12%; text-align: center; }
+                .price { width: 18%; text-align: right; }
+                .amount { width: 18%; text-align: right; }
+                
                 .totals { 
                     margin-top: 15px; 
                     border-top: 1px dashed #000; 
@@ -908,31 +909,29 @@ function printThermalBill() {
                 .grand-total { 
                     font-size: 15px; 
                     font-weight: bold; 
-                    border-top: 2px solid #000; 
+                    color: #1976d2;
+                    border-top: 2px solid #1976d2; 
                     padding-top: 8px; 
                     margin-top: 8px; 
                 }
                 .footer { 
                     text-align: center; 
-                    margin-top: 20px; 
+                    margin-top: 18px; 
                     font-size: 11px; 
                 }
-                .centered { 
-                    text-align: center; 
-                }
+                .centered { text-align: center; }
             </style>
         </head>
         <body>
-            ${bill.innerHTML}
+            <div class="thermal-container">
+                ${bill.innerHTML}
+            </div>
             
             <script>
-                // Auto print after load
                 window.onload = function() {
                     setTimeout(() => {
                         window.print();
-                        // Optional: close after printing (uncomment if needed)
-                        // setTimeout(() => window.close(), 800);
-                    }, 600);
+                    }, 700);
                 };
             <\/script>
         </body>
