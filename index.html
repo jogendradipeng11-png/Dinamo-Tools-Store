@@ -83,11 +83,13 @@
         }
         #bill {
             background: white;
-            padding: 30px;
+            padding: 25px;
             border: 2px solid var(--primary);
             border-radius: 10px;
             margin: 15px 0;
-            min-height: 400px;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 300px;
         }
         .modal {
             display: none;
@@ -126,7 +128,6 @@
     </button>
 </header>
 <div class="container">
-
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
@@ -391,11 +392,12 @@ async function initScanner() {
         try {
             await html5QrCode.start(true, config, handleScannedCode, () => {});
             statusEl.style.color = "#2e7d32";
-            statusEl.textContent = "✅ Scanner started";
+            statusEl.textContent = "✅ Scanner started (using available camera)";
             document.getElementById('flashBtn').style.display = 'inline-block';
         } catch (fallbackErr) {
             statusEl.style.color = "#d32f2f";
-            statusEl.innerHTML = `❌ Camera not available.<br><button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px;">Retry Camera</button>`;
+            statusEl.innerHTML = `❌ Camera not available.<br>Please allow camera access.<br><br>
+                <button onclick="initScanner()" style="padding:10px 20px; background:#1976d2; color:white; border:none; border-radius:6px;">🔄 Retry Camera</button>`;
         }
     }
 }
@@ -675,7 +677,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== BILLING WITH LOGO FALLBACK ==================
+// ================== FIXED BILL GENERATION WITH LOGO ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -708,14 +710,12 @@ function generateBill() {
     const customerIdVal = document.getElementById('customerId').value.trim();
 
     const billHTML = `
-    <div style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
         <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
             <img src="${storeConfig.logoUrl}" 
-                 alt="Logo" 
+                 alt="Tool Store Logo" 
                  style="max-width:180px; height:auto; margin-bottom:12px;" 
-                 crossorigin="anonymous"
-                 onerror="this.style.display='none'; this.parentNode.querySelector('.logo-fallback').style.display='block';">
-            <div class="logo-fallback" style="display:none; font-size:48px; margin:10px 0;">🛠️</div>
+                 crossorigin="anonymous">
             <h1 style="margin:8px 0 5px; color:#1976d2; font-size:28px;">${storeConfig.businessName}</h1>
             <p style="margin:0; font-size:15px;">
                 ${storeConfig.address}<br>
@@ -767,10 +767,10 @@ function generateBill() {
     });
 }
 
-// ================== PDF & PRINT ==================
+// ================== FIXED PDF DOWNLOAD (Logo should appear now) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
-    if (!element.innerHTML.trim()) {
+    if (!element || !element.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
@@ -782,7 +782,9 @@ function downloadPDF() {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            letterRendering: true
+            letterRendering: true,
+            scrollX: 0,
+            scrollY: 0
         },
         jsPDF: { 
             unit: 'mm', 
@@ -792,26 +794,36 @@ function downloadPDF() {
     };
 
     setTimeout(() => {
-        html2pdf().set(opt).from(element).save();
+        html2pdf().set(opt).from(element).save()
+            .catch(err => {
+                console.error("PDF Error:", err);
+                alert("PDF generated but logo may not appear due to external image restrictions.\nTry hosting logo on Firebase or Imgur.");
+            });
     }, 800);
 }
 
+// ================== FIXED PRINT FUNCTION ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
 
-    const win = window.open('', '_blank');
-    win.document.write(`
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
         <html>
-        <head><title>Factura</title>
-        <style>body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; } img { max-width: 180px; height: auto; }</style>
+        <head>
+            <title>Factura Tool Store Colombia</title>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; margin: 0; }
+                img { max-width: 180px; height: auto; }
+                #invoiceContent { max-width: 800px; margin: 0 auto; }
+            </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 500);">
+        <body onload="window.print(); setTimeout(() => window.close(), 800);">
             ${bill.innerHTML}
         </body>
         </html>
     `);
-    win.document.close();
+    printWindow.document.close();
 }
 
 function clearCart() {
