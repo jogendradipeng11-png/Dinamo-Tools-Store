@@ -409,7 +409,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported.");
+        alert("Flashlight not supported on this device.");
         isFlashOn = false;
     }
 }
@@ -675,7 +675,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED BILL WITH LOGO FALLBACK ==================
+// ================== BILLING WITH LOGO FALLBACK ==================
 function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -711,7 +711,7 @@ function generateBill() {
     <div style="max-width:800px; margin:0 auto; font-family:'Segoe UI',Arial,sans-serif; padding:30px; background:#fff; color:#333; line-height:1.6;">
         <div style="text-align:center; margin-bottom:25px; border-bottom:3px solid #1976d2; padding-bottom:20px;">
             <img src="${storeConfig.logoUrl}" 
-                 alt="Tool Store Logo" 
+                 alt="Logo" 
                  style="max-width:180px; height:auto; margin-bottom:12px;" 
                  crossorigin="anonymous"
                  onerror="this.style.display='none'; this.parentNode.querySelector('.logo-fallback').style.display='block';">
@@ -767,7 +767,7 @@ function generateBill() {
     });
 }
 
-// ================== PDF DOWNLOAD ==================
+// ================== PDF & PRINT ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element.innerHTML.trim()) {
@@ -792,15 +792,10 @@ function downloadPDF() {
     };
 
     setTimeout(() => {
-        html2pdf().set(opt).from(element).save()
-            .catch(err => {
-                console.error("PDF error:", err);
-                alert("PDF generated, but logo may not appear (GitHub link issue).");
-            });
+        html2pdf().set(opt).from(element).save();
     }, 800);
 }
 
-// ================== PRINT ==================
 function printBill() {
     const bill = document.getElementById('bill');
     if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -809,10 +804,7 @@ function printBill() {
     win.document.write(`
         <html>
         <head><title>Factura</title>
-        <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; }
-            img { max-width: 180px; height: auto; }
-        </style>
+        <style>body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; } img { max-width: 180px; height: auto; }</style>
         </head>
         <body onload="window.print(); setTimeout(() => window.close(), 500);">
             ${bill.innerHTML}
