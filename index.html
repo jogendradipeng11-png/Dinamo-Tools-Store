@@ -27,8 +27,8 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .logo-header {
-            height: 85px;
-            max-width: 260px;
+            height: 75px;
+            max-width: 220px;
             object-fit: contain;
             margin: 0 auto 8px;
             display: block;
@@ -75,13 +75,20 @@
         .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         .table th { background: #f8f9fa; }
+        #results button {
+            background: #e3f2fd;
+            color: var(--primary);
+            margin: 6px 0;
+            width: 100%;
+            text-align: left;
+        }
         #bill {
             background: white;
-            padding: 25px;
-            border: 4px solid var(--primary);
+            padding: 20px;
+            border: 3px solid var(--primary);
             border-radius: 12px;
             margin: 15px 0;
-            min-height: 450px;
+            min-height: 400px;
         }
         .modal {
             display: none;
@@ -112,7 +119,8 @@
 </head>
 <body>
 <header>
-    <img src="https://i.imgur.com/xCbfxgt.png" alt="Dinamo Tools Logo" class="logo-header">
+    <img src="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true"
+         alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
     <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">
         ⚙️ Configuration
@@ -125,7 +133,7 @@
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
-        <p class="scanner-note">⚠️ Important: Must be opened with HTTPS. Best on mobile.</p>
+        <p class="scanner-note">⚠️ Important: Must be opened with HTTPS (not file://). Best on mobile.</p>
      
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
@@ -220,7 +228,8 @@
         <h3>⚙️ Store & Tax Configuration
             <span onclick="closeConfigModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
-        <input id="logoUrl" placeholder="Logo Image URL" value="https://i.imgur.com/xCbfxgt.png">
+        <input id="logoUrl" placeholder="Logo Image URL" 
+               value="https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true">
         <input id="businessName" placeholder="Business Name" value="Dinamo Tools Sales & Service">
         <input id="nit" placeholder="NIT (Tax ID)" value="900.123.456-7">
         <input id="address" placeholder="Full Address" value="Calle 123 #45-67, Bogotá, Colombia">
@@ -257,7 +266,7 @@ let scanMode = 'addProduct';
 let editMode = null;
 
 let storeConfig = {
-    logoUrl: "https://i.imgur.com/xCbfxgt.png",
+    logoUrl: "https://github.com/jogendradipeng11-png/Dinamo-Tools-Store/blob/main/logo.png?raw=true",
     businessName: "Dinamo Tools Sales & Service",
     nit: "900.123.456-7",
     address: "Calle 123 #45-67, Bogotá, Colombia",
@@ -316,15 +325,15 @@ function loadData() {
     });
 }
 
-// ================== LOGO TO BASE64 ==================
+// ================== LOGO TO BASE64 (for better PDF) ==================
 async function getLogoBase64(url) {
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || 600;
-            canvas.height = img.naturalHeight || 250;
+            canvas.width = img.naturalWidth || 400;
+            canvas.height = img.naturalHeight || 150;
             canvas.getContext('2d').drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
@@ -387,7 +396,7 @@ async function initScanner() {
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
         statusEl.style.color = "#d32f2f";
-        statusEl.textContent = "❌ Camera error. Please allow access and retry.";
+        statusEl.textContent = "❌ Camera error. Please try again.";
     }
 }
 
@@ -400,7 +409,7 @@ async function toggleFlashlight() {
         btn.textContent = isFlashOn ? "🔦 Flashlight ON" : "🔦 Flashlight OFF";
         btn.classList.toggle('on', isFlashOn);
     } catch (e) {
-        alert("Flashlight not supported on this device.");
+        alert("Flashlight not supported.");
     }
 }
 
@@ -421,14 +430,14 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 function scanForAddToBill() {
     scanMode = 'addToBill';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to add to invoice";
+    document.getElementById('scannerStatus').textContent = "📱 Scan to add to invoice";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function scanForEdit() {
     scanMode = 'editProduct';
     document.getElementById('scannerStatus').style.color = "#ff9800";
-    document.getElementById('scannerStatus').textContent = "📱 Scan barcode/QR to edit product";
+    document.getElementById('scannerStatus').textContent = "📱 Scan to edit product";
     window.scrollTo({ top: document.getElementById('productList').offsetTop - 100, behavior: "smooth" });
 }
 
@@ -453,11 +462,9 @@ function addToCart(product) {
     const qtyStr = prompt(`Quantity for "${product.name}":`, "1");
     const qty = parseInt(qtyStr);
     if (!qty || qty <= 0) return;
-    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available in stock!`);
+    if (qty > (product.qty || 0)) return alert(`Only ${product.qty || 0} units available!`);
 
-    db.ref('products/' + product.code).update({
-        qty: firebase.database.ServerValue.increment(-qty)
-    });
+    db.ref('products/' + product.code).update({ qty: firebase.database.ServerValue.increment(-qty) });
     cart.push({ ...product, qty });
     renderCart();
     document.getElementById('search').value = '';
@@ -511,8 +518,8 @@ function renderProductList(filtered = products) {
 
 function filterProductList() {
     const query = document.getElementById('productSearch').value.toLowerCase().trim();
-    const filtered = products.filter(p =>
-        (p.name || '').toLowerCase().includes(query) ||
+    const filtered = products.filter(p => 
+        (p.name || '').toLowerCase().includes(query) || 
         (p.code || '').toString().includes(query)
     );
     renderProductList(filtered);
@@ -521,16 +528,14 @@ function filterProductList() {
 function restockProduct(code) {
     const qty = parseInt(prompt("Enter quantity to add:", "10"));
     if (!qty || qty <= 0) return;
-    db.ref('products/' + code).update({
-        qty: firebase.database.ServerValue.increment(qty)
-    }).then(() => alert("✅ Stock updated")).catch(err => alert("Error: " + err.message));
+    db.ref('products/' + code).update({ qty: firebase.database.ServerValue.increment(qty) })
+        .then(() => alert("✅ Stock updated"));
 }
 
 function deleteProduct(code) {
     if (confirm(`Delete product ${code}?`)) {
         db.ref('products/' + code).remove()
-            .then(() => alert("✅ Product deleted"))
-            .catch(err => alert("Error: " + err.message));
+            .then(() => alert("✅ Product deleted"));
     }
 }
 
@@ -552,16 +557,18 @@ function editProduct(code) {
 async function saveProduct() {
     const code = document.getElementById('pcode').value.trim();
     if (!code) return alert("❌ Barcode/Code is required!");
-   
+
     const name = document.getElementById('pname').value.trim() || "Unnamed Product";
     const price = parseFloat(document.getElementById('pprice').value) || 0;
     const cost = parseFloat(document.getElementById('pcost').value) || 0;
     const qty = parseFloat(document.getElementById('pqty').value) || 0;
     const minStock = parseInt(document.getElementById('pminstock').value) || 5;
     const cat = document.getElementById('pcat').value.trim();
+
     let product = { name, code, cat, price, cost, qty, minStock, imageUrl: '' };
     const existing = products.find(p => p.code === code);
     if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
+
     const file = document.getElementById('pimage').files[0];
     if (file) {
         try {
@@ -569,33 +576,23 @@ async function saveProduct() {
             await storageRef.put(file);
             product.imageUrl = await storageRef.getDownloadURL();
         } catch (err) {
-            alert("⚠️ Image upload failed. Saving without image.");
+            alert("⚠️ Image upload failed.");
         }
     }
-    try {
-        await db.ref('products/' + code).set(product);
-        alert("✅ Product saved successfully!");
-        showVerification(!!editMode);
-        editMode = null;
-        const snap = await db.ref('products').once('value');
-        products = snap.val() ? Object.values(snap.val()) : [];
-        renderProductList();
-        updateInventorySummary();
-    } catch (err) {
-        alert("❌ Failed to save product: " + err.message);
-    }
+
+    await db.ref('products/' + code).set(product);
+    alert("✅ Product saved successfully!");
+    showVerification(!!editMode);
+    editMode = null;
+    renderProductList();
+    updateInventorySummary();
 }
 
 function showVerification(isUpdate) {
     const ver = document.getElementById('verificationBox');
-    ver.innerHTML = `
-        <strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong><br><br>
-        <strong>Barcode:</strong> ${document.getElementById('pcode').value}<br>
-        <strong>Name:</strong> ${document.getElementById('pname').value || '—'}<br>
-        <strong>Price:</strong> $${parseFloat(document.getElementById('pprice').value || 0).toLocaleString('es-CO')}
-    `;
+    ver.innerHTML = `<strong>✅ Product ${isUpdate ? 'Updated' : 'Saved'} Successfully!</strong>`;
     ver.style.display = 'block';
-    setTimeout(() => ver.style.display = 'none', 8000);
+    setTimeout(() => ver.style.display = 'none', 6000);
     document.querySelectorAll('#pname,#pcode,#pcat,#pprice,#pcost,#pqty,#pminstock').forEach(el => el.value = '');
     document.getElementById('pimage').value = '';
     document.getElementById('imagePreview').innerHTML = '';
@@ -605,16 +602,9 @@ function uploadFromFile() { document.getElementById('pimage').click(); }
 
 function captureProductPhoto() {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
+    input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
     input.onchange = e => {
-        if (e.target.files[0]) {
-            const dt = new DataTransfer();
-            dt.items.add(e.target.files[0]);
-            document.getElementById('pimage').files = dt.files;
-            document.getElementById('pimage').dispatchEvent(new Event('change'));
-        }
+        if (e.target.files[0]) document.getElementById('pimage').files = e.target.files;
     };
     input.click();
 }
@@ -654,7 +644,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED SINGLE PAGE PRINT + GOOD PDF ==================
+// ================== FIXED BILL GENERATION ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -666,10 +656,10 @@ async function generateBill() {
         subtotal += amount;
         itemsHTML += `
             <tr>
-                <td style="padding:14px 12px; border-bottom:1px solid #ddd;">${item.name}</td>
-                <td style="padding:14px 12px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
-                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
-                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
+                <td style="padding:12px 15px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:12px 15px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:12px 15px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
             </tr>`;
     });
 
@@ -677,10 +667,7 @@ async function generateBill() {
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
     const invoiceId = "INV-" + Date.now().toString().slice(-8);
-    const currentDate = new Date().toLocaleString('es-CO', {
-        timeZone: 'America/Bogota',
-        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
     const customerIdVal = document.getElementById('customerId').value.trim();
@@ -688,100 +675,65 @@ async function generateBill() {
     let logoSrc = storeConfig.logoUrl;
     try {
         logoSrc = await getLogoBase64(storeConfig.logoUrl);
-    } catch(e) {
-        console.warn("Using original logo");
-    }
+    } catch(e) { console.warn("Logo fallback used"); }
 
     const billHTML = `
-    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
-        <div style="text-align:center; margin-bottom:25px;">
-            <img src="${logoSrc}" alt="Dinamo Tools Logo" style="max-height:110px; margin-bottom:15px;">
-            <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">${storeConfig.businessName}</h1>
-            <p style="margin:0; font-size:15px; color:#444;">
+    <div id="invoiceContent" style="max-width:800px; margin:0 auto; background:#fff; padding:25px; border:4px solid #1976d2; border-radius:15px; font-family:Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:20px;">
+            <img src="${logoSrc}" alt="Dinamo Tools" style="max-height:100px; margin-bottom:10px;">
+            <h1 style="margin:10px 0; color:#1976d2;">${storeConfig.businessName}</h1>
+            <p style="margin:5px 0; font-size:15px;">
                 ${storeConfig.address}<br>
                 NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
                 ${storeConfig.city} • ${storeConfig.email}
             </p>
         </div>
 
-        <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-size:15px;">
-            <div>
-                <strong style="color:#1976d2;">Factura No:</strong> ${invoiceId}<br>
-                <strong style="color:#1976d2;">Fecha:</strong> ${currentDate}
-            </div>
+        <div style="display:flex; justify-content:space-between; margin:25px 0; font-size:15px;">
+            <div><strong>Factura No:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
             <div style="text-align:right;">
                 <strong>Cliente:</strong> ${customer}<br>
-                ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
+                ${customerIdVal ? `<strong>NIT/CC:</strong> ${customerIdVal}` : ''}
             </div>
         </div>
 
-        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15.5px;">
+        <table style="width:100%; border-collapse:collapse; margin:20px 0;">
             <thead>
                 <tr style="background:#1976d2; color:white;">
-                    <th style="padding:14px 12px; text-align:left;">Producto</th>
-                    <th style="padding:14px 12px; text-align:center;">Cant.</th>
-                    <th style="padding:14px 12px; text-align:right;">Precio Unit.</th>
-                    <th style="padding:14px 12px; text-align:right;">Total</th>
+                    <th style="padding:12px; text-align:left;">Producto</th>
+                    <th style="padding:12px; text-align:center;">Cant.</th>
+                    <th style="padding:12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:12px; text-align:right;">Total</th>
                 </tr>
             </thead>
             <tbody>${itemsHTML}</tbody>
         </table>
 
-        <div style="text-align:right; margin-top:35px;">
-            <table style="margin-left:auto; width:380px; font-size:16.5px;">
-                <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
-                <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
-                <tr style="font-size:24px; font-weight:bold; color:#1976d2; border-top:4px double #1976d2;">
-                    <td style="padding:16px 0;">TOTAL A PAGAR</td>
-                    <td style="padding:16px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+        <div style="text-align:right; margin-top:30px;">
+            <table style="margin-left:auto; font-size:16px;">
+                <tr><td>Subtotal:</td><td style="padding-left:40px;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="padding-left:40px;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:23px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
+                    <td>TOTAL A PAGAR:</td>
+                    <td style="padding-left:40px;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
 
-        <div style="text-align:center; margin-top:50px; color:#555; font-size:15px;">
+        <div style="text-align:center; margin-top:40px; color:#555;">
             Gracias por su compra 🛠️ • ¡Vuelva pronto a Dinamo Tools Sales & Service!
         </div>
     </div>`;
 
     document.getElementById('bill').innerHTML = billHTML;
+
+    db.ref('bills').push({
+        invoiceId, date: Date.now(), total: grandTotal, iva: ivaAmount,
+        subtotal, customer, customerId: customerIdVal, items: cart
+    });
 }
 
-// ================== FIXED SINGLE PAGE PRINT ==================
-function printBill() {
-    const bill = document.getElementById('bill');
-    if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Factura - Dinamo Tools Sales & Service</title>
-            <style>
-                @page { size: A4; margin: 15mm; }
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    padding: 0; 
-                    margin: 0; 
-                }
-                #invoiceContent { 
-                    max-width: 100%; 
-                    margin: 0 auto; 
-                }
-                img { max-height: 110px; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 12px 10px; border: 1px solid #ddd; }
-                th { background: #1976d2; color: white; }
-            </style>
-        </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 1000);">
-            ${bill.innerHTML}
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
-
-// ================== PDF DOWNLOAD ==================
+// ================== PDF DOWNLOAD (Improved) ==================
 function downloadPDF() {
     const element = document.getElementById('bill');
     if (!element || !element.innerHTML.trim()) {
@@ -789,7 +741,7 @@ function downloadPDF() {
     }
 
     const opt = {
-        margin: [20, 20, 20, 20],
+        margin: [15, 15, 15, 15],
         filename: `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
@@ -805,9 +757,32 @@ function downloadPDF() {
         }
     };
 
-    setTimeout(() => {
-        html2pdf().set(opt).from(element).save();
-    }, 600);
+    html2pdf().set(opt).from(element).save()
+        .catch(err => alert("PDF generated with possible logo issue."));
+}
+
+// ================== PRINT FUNCTION (Improved) ==================
+function printBill() {
+    const bill = document.getElementById('bill');
+    if (!bill.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Factura - Dinamo Tools Sales & Service</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 30px; margin: 0; }
+                #invoiceContent { max-width: 800px; margin: 0 auto; }
+                img { max-height: 100px; }
+            </style>
+        </head>
+        <body onload="window.print(); setTimeout(() => window.close(), 800);">
+            ${bill.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 function clearCart() {
@@ -819,8 +794,7 @@ function clearCart() {
 
 function sendWhatsApp() {
     const billText = document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice";
-    const text = encodeURIComponent(billText);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
 }
 
 // ================== INITIALIZE ==================
