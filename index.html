@@ -726,37 +726,55 @@ async function generateBill() {
 
 async function downloadPDF() {
     const element = document.getElementById('pdfContainer');
+    
     if (!element || !element.innerHTML.trim()) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    try {
-        // Give time for base64 logo to render
-        await new Promise(r => setTimeout(r, 800));
+    const loadingAlert = alert("⏳ Generating PDF... Please wait.");
 
+    try {
+        // Optimized html2canvas options for better quality + performance
         const canvas = await html2canvas(element, {
-            scale: 2.5,           // High quality
-            useCORS: false,       // No need anymore with base64
+            scale: 2.8,                    // Higher scale = sharper text & details (balanced)
+            useCORS: false,                // Safe since logo is commented out
             allowTaint: true,
             backgroundColor: "#ffffff",
-            logging: false
+            logging: false,                // Disable console spam
+            width: element.offsetWidth,    // Prevent layout shift
+            height: element.offsetHeight,
+            scrollX: 0,
+            scrollY: 0,
+            imageTimeout: 0,               // No timeout for images
+            removeContainer: true          // Clean up after rendering
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        // High-quality image data
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+            compress: true                 // Reduce PDF file size
+        });
+
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Factura_DinamoTools_${new Date().toISOString().slice(0,10)}.pdf`);
+        // Add image with proper scaling
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, '', 'FAST');
 
-        alert("✅ PDF downloaded successfully!");
+        // Save with clean filename
+        const fileName = `Factura_DinamoTools_${new Date().toISOString().slice(0,10)}_${Date.now().toString().slice(-6)}.pdf`;
+        pdf.save(fileName);
+
+        alert("✅ PDF downloaded successfully!\n\nFile saved with high quality.");
 
     } catch (err) {
-        console.error("PDF Error:", err);
-        alert("❌ PDF generation failed.\n\nTry 'Print Invoice' button for now.");
+        console.error("PDF Generation Error:", err);
+        alert("❌ PDF generation failed.\n\nPlease try:\n1. 'Print Invoice' button\n2. Refresh page and generate invoice again.");
     }
 }
 function PrintInvoice() {
