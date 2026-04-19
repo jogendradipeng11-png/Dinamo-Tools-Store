@@ -155,24 +155,24 @@
     </div>
 </div>
 
-<!-- GOOGLE SHEETS SYNC MODAL - POPUP VERSION -->
+<!-- GOOGLE SHEETS SYNC MODAL -->
 <div id="googleSyncModal" class="modal">
     <div class="modal-content">
-        <h3>🔄 Google Sheets Management
+        <h3>🔄 Google Sheets Sync
             <span onclick="closeGoogleSyncModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
-        <p style="text-align:center; margin:20px 0 25px;">Open popup window to view, edit, delete or update data:</p>
+        <p style="text-align:center; margin:20px 0 25px;">Sync data to Google Sheets:</p>
        
-        <button onclick="openProductsPopup()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📦 Open Products Popup (Edit / Delete / Update)
+        <button onclick="syncProductsToSheet()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📦 Sync Products
         </button>
        
-        <button onclick="openInvoicesPopup()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📄 Open Invoices Popup (Edit / Delete / Update)
+        <button onclick="syncInvoicesToSheet()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📄 Sync Invoices / Billing
         </button>
        
         <p style="font-size:13px; color:#666; text-align:center; margin-top:20px;">
-            Auto-sync happens automatically when you generate a new bill.
+            Auto-sync runs automatically when you generate a new bill.
         </p>
     </div>
 </div>
@@ -227,9 +227,11 @@ function openConfigModal() {
     document.getElementById('nequiLink').value = storeConfig.nequiLink || "https://clientes.nequi.com.co/recargas";
     document.getElementById('pseLink').value = storeConfig.pseLink || "";
 }
+
 function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
 }
+
 function saveConfig() {
     storeConfig.logoUrl = document.getElementById('logoUrl').value.trim() || storeConfig.logoUrl;
     storeConfig.businessName = document.getElementById('businessName').value.trim() || "Dinamo Tools Sales & Service";
@@ -247,37 +249,40 @@ function saveConfig() {
     closeConfigModal();
 }
 
-// ================== GOOGLE SHEETS POPUP MANAGEMENT ==================
-function openGoogleSyncModal() {
-    document.getElementById('googleSyncModal').style.display = 'flex';
+// ================== GOOGLE SHEETS SYNC (FIXED) ==================
+// ←←← REPLACE WITH YOUR REAL DEPLOYED WEB APP URL ←←←
+const GOOGLE_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
+
+async function syncProductsToSheet() {
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncProducts");
+        const text = await response.text();
+        alert("✅ Products synced successfully!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\nMake sure:\n1. Web App is deployed as 'Anyone'\n2. URL is correct (ends with /exec)");
+    }
 }
 
-function closeGoogleSyncModal() {
-    document.getElementById('googleSyncModal').style.display = 'none';
+async function syncInvoicesToSheet() {
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        const text = await response.text();
+        alert("✅ Invoices synced successfully!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\nMake sure:\n1. Web App is deployed as 'Anyone'\n2. URL is correct (ends with /exec)");
+    }
 }
 
-// ←←← REPLACE THIS WITH YOUR ACTUAL GOOGLE SHEET URL ←←←
-const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
-
-function openProductsPopup() {
-    closeGoogleSyncModal();
-    // Opens as a popup window (standard dialog-like experience)
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=0", "ProductsPopup", 
-        "width=1200,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no");
-}
-
-function openInvoicesPopup() {
-    closeGoogleSyncModal();
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=123456789", "InvoicesPopup", 
-        "width=1200,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no");
-}
-
-// Auto-sync function (called after generating bill)
 async function autoSyncInvoices() {
-    console.log("✅ Auto-sync triggered (add fetch here if you want Web App sync later)");
+    try {
+        await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        console.log("✅ Invoices auto-synced");
+    } catch (e) {
+        console.log("Auto-sync skipped");
+    }
 }
 
-// ================== SCANNER FUNCTIONS (unchanged) ==================
+// ================== SCANNER FUNCTIONS ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
@@ -537,7 +542,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED GENERATE BILL ==================
+// ================== FIXED GENERATE BILL WITH AUTO SYNC ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -661,7 +666,7 @@ async function generateBill() {
         total: grandTotal
     });
 
-    // Auto sync
+    // Auto sync to Google Sheets
     setTimeout(autoSyncInvoices, 800);
 
     cart = [];
@@ -676,7 +681,6 @@ function updatePaymentQRsForPrint() {
     const displayDiv = document.getElementById('adjustedDisplay');
     if (displayDiv) displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
 
-    // Nequi QR
     const nequiDiv = document.getElementById('nequiQRPrint');
     if (nequiDiv) {
         nequiDiv.innerHTML = '';
@@ -693,7 +697,6 @@ function updatePaymentQRsForPrint() {
         }, 100);
     }
 
-    // PSE QR
     const pseDiv = document.getElementById('pseQRPrint');
     if (pseDiv) {
         pseDiv.innerHTML = '';
