@@ -49,6 +49,7 @@
 </header>
 
 <div class="container">
+
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
@@ -155,24 +156,24 @@
     </div>
 </div>
 
-<!-- GOOGLE SHEETS SYNC MODAL - POPUP VERSION -->
+<!-- GOOGLE SHEETS SYNC MODAL -->
 <div id="googleSyncModal" class="modal">
     <div class="modal-content">
-        <h3>🔄 Google Sheets Management
+        <h3>🔄 Google Sheets Synchronization
             <span onclick="closeGoogleSyncModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
-        <p style="text-align:center; margin:20px 0 25px;">Open popup window to view, edit, delete or update data:</p>
-       
-        <button onclick="openProductsPopup()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📦 Open Products Popup (Edit / Delete / Update)
+        <p style="text-align:center; margin:20px 0 25px;">Sync data via Google Apps Script:</p>
+      
+        <button onclick="syncProductsToSheet()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📦 Sync Products
         </button>
-       
-        <button onclick="openInvoicesPopup()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📄 Open Invoices Popup (Edit / Delete / Update)
+      
+        <button onclick="syncInvoicesToSheet()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📄 Sync Invoices / Billing
         </button>
-       
+      
         <p style="font-size:13px; color:#666; text-align:center; margin-top:20px;">
-            Auto-sync happens automatically when you generate a new bill.
+            Auto-sync runs automatically when you generate a new bill.
         </p>
     </div>
 </div>
@@ -247,7 +248,7 @@ function saveConfig() {
     closeConfigModal();
 }
 
-// ================== GOOGLE SHEETS POPUP MANAGEMENT ==================
+// ================== GOOGLE SHEETS SYNC ==================
 function openGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'flex';
 }
@@ -256,28 +257,47 @@ function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
-// ←←← REPLACE THIS WITH YOUR ACTUAL GOOGLE SHEET URL ←←←
-const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
+// ←←← PUT YOUR REAL WEB APP URL HERE (very important) ←←←
+const GOOGLE_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
 
-function openProductsPopup() {
+async function syncProductsToSheet() {
     closeGoogleSyncModal();
-    // Opens as a popup window (standard dialog-like experience)
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=0", "ProductsPopup", 
-        "width=1200,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no");
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
+        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
+    }
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncProducts");
+        const text = await response.text();
+        alert("✅ Products synced successfully!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
+    }
 }
 
-function openInvoicesPopup() {
+async function syncInvoicesToSheet() {
     closeGoogleSyncModal();
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=123456789", "InvoicesPopup", 
-        "width=1200,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no");
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
+        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
+    }
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        const text = await response.text();
+        alert("✅ Invoices synced successfully!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
+    }
 }
 
-// Auto-sync function (called after generating bill)
 async function autoSyncInvoices() {
-    console.log("✅ Auto-sync triggered (add fetch here if you want Web App sync later)");
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) return;
+    try {
+        await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        console.log("✅ Auto-synced invoices");
+    } catch (e) {
+        console.log("Auto-sync skipped");
+    }
 }
-
-// ================== SCANNER FUNCTIONS (unchanged) ==================
+// ================== SCANNER FUNCTIONS ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
@@ -537,7 +557,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== FIXED GENERATE BILL ==================
+// ================== FIXED GENERATE BILL FUNCTION ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -616,6 +636,7 @@ async function generateBill() {
             </table>
         </div>
 
+        <!-- Adjustable Amount -->
         <div style="margin:25px 0; padding:15px; background:#f0f8ff; border:2px solid #1976d2; border-radius:10px; text-align:center;">
             <strong>Monto a Pagar (puedes ajustar hacia abajo):</strong><br><br>
             <input id="adjustAmount" type="number" value="${Math.round(grandTotal)}" 
@@ -646,7 +667,11 @@ async function generateBill() {
 
     setTimeout(updatePaymentQRsForPrint, 300);
 
-    // Save to Firebase
+    // Auto sync to Google Sheets
+    setTimeout(() => {
+        syncInvoicesToSheet();
+    }, 800);
+
     lastInvoiceCart = [...cart];
     cart.forEach(item => {
         db.ref('products/' + item.code).update({ qty: firebase.database.ServerValue.increment(-item.qty) });
@@ -660,10 +685,8 @@ async function generateBill() {
         iva: ivaAmount,
         total: grandTotal
     });
-
-    // Auto sync
-    setTimeout(autoSyncInvoices, 800);
-
+// Auto sync to Google Sheets after saving invoice
+setTimeout(autoSyncInvoices, 800);
     cart = [];
     renderCart();
 }
@@ -674,7 +697,9 @@ function updatePaymentQRsForPrint() {
     const amount = Math.round(payAmount);
 
     const displayDiv = document.getElementById('adjustedDisplay');
-    if (displayDiv) displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
+    if (displayDiv) {
+        displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
+    }
 
     // Nequi QR
     const nequiDiv = document.getElementById('nequiQRPrint');
