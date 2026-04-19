@@ -248,7 +248,7 @@ function saveConfig() {
     closeConfigModal();
 }
 
-// ================== GOOGLE SHEETS SYNC MODAL ==================
+// ================== GOOGLE SHEETS SYNC ==================
 function openGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'flex';
 }
@@ -257,36 +257,42 @@ function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
-// ←←← PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE ←←←
+// ←←← PUT YOUR REAL WEB APP URL HERE (very important) ←←←
 const GOOGLE_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
 
 async function syncProductsToSheet() {
     closeGoogleSyncModal();
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
+        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
+    }
     try {
         const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncProducts");
         const text = await response.text();
-        alert("✅ Products synced successfully to Google Sheets!\n" + text);
+        alert("✅ Products synced successfully!\n" + text);
     } catch (err) {
-        alert("❌ Sync failed.\nMake sure the Web App is deployed and the URL is correct.");
+        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
     }
 }
 
 async function syncInvoicesToSheet() {
     closeGoogleSyncModal();
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
+        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
+    }
     try {
         const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
         const text = await response.text();
-        alert("✅ Invoices synced successfully to Google Sheets!\n" + text);
+        alert("✅ Invoices synced successfully!\n" + text);
     } catch (err) {
-        alert("❌ Sync failed.\nMake sure the Web App is deployed and the URL is correct.");
+        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
     }
 }
 
-// Auto-sync function (called automatically after generating bill)
 async function autoSyncInvoices() {
+    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) return;
     try {
         await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
-        console.log("✅ Invoices auto-synced to Google Sheets");
+        console.log("✅ Auto-synced invoices");
     } catch (e) {
         console.log("Auto-sync skipped");
     }
