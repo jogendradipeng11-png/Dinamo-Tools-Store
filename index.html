@@ -610,7 +610,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== GENERATE BILL WITH ADJUSTED AMOUNT (Fixed for Print) ==================
+// ================== GENERATE BILL WITH ADJUSTED AMOUNT (FINAL FIX) ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -692,11 +692,11 @@ async function generateBill() {
         </div>
 
         <!-- Adjustable Payment Amount -->
-        <div style="margin:20px 0; padding:15px; background:#f0f8ff; border:2px solid #1976d2; border-radius:10px; text-align:center;">
+        <div style="margin:25px 0; padding:15px; background:#f0f8ff; border:2px solid #1976d2; border-radius:10px; text-align:center;">
             <strong>Monto a Pagar (puedes ajustar hacia abajo):</strong><br><br>
             <input id="adjustAmount" type="number" value="${Math.round(grandTotal)}" 
-                   style="width:200px; font-size:18px; text-align:center; padding:12px; border:2px solid #1976d2; border-radius:8px;">
-            <small style="display:block; margin-top:8px; color:#555;">Ejemplo: Cambia 98 → 95</small>
+                   style="width:200px; font-size:18px; text-align:center; padding:12px; border:2px solid #1976d2; border-radius:8px;" onchange="updatePaymentQRsForPrint()">
+            <div id="adjustedDisplay" style="margin-top:12px; font-size:16px; font-weight:bold; color:#d32f2f;"></div>
         </div>
 
         <div class="payment-section">
@@ -721,7 +721,7 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
     document.getElementById('pdfContainer').innerHTML = billHTML;
 
-    setTimeout(updatePaymentQRsForPrint, 300);
+    setTimeout(updatePaymentQRsForPrint, 100);
 
     lastInvoiceCart = [...cart];
     cart.forEach(item => {
@@ -741,7 +741,7 @@ async function generateBill() {
     renderCart();
 }
 
-// ================== UPDATED QR + PRINT ADJUSTED AMOUNT ==================
+// ================== UPDATED FUNCTION - SHOWS ADJUSTED AMOUNT IN BILL & PRINT ==================
 function updatePaymentQRsForPrint() {
     let payAmount = parseFloat(document.getElementById('adjustAmount').value) || 0;
     if (payAmount <= 0) {
@@ -750,18 +750,10 @@ function updatePaymentQRsForPrint() {
     }
     const amount = Math.round(payAmount);
 
-    // Show adjusted amount in the bill (this will be printed)
-    const adjustInput = document.getElementById('adjustAmount');
-    if (adjustInput) {
-        const displayAmount = document.createElement('div');
-        displayAmount.style.cssText = 'margin-top:12px; font-size:16px; font-weight:bold; color:#1976d2;';
-        displayAmount.innerHTML = `Monto Ajustado a Pagar: <strong>$${amount.toLocaleString('es-CO')}</strong>`;
-        const parent = adjustInput.parentElement;
-        // Remove previous display if exists
-        const old = parent.querySelector('.adjusted-display');
-        if (old) old.remove();
-        displayAmount.className = 'adjusted-display';
-        parent.appendChild(displayAmount);
+    // Show adjusted amount clearly in the bill (this will print)
+    const displayDiv = document.getElementById('adjustedDisplay');
+    if (displayDiv) {
+        displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
     }
 
     // Nequi QR
