@@ -156,28 +156,43 @@
     </div>
 </div>
 
-<!-- GOOGLE SHEETS SYNC MODAL -->
+<!-- GOOGLE SHEETS SYNC MODAL - INLINE EDITABLE TABLE -->
 <div id="googleSyncModal" class="modal">
-    <div class="modal-content">
-        <h3>🔄 Google Sheets Synchronization
+    <div class="modal-content" style="width:95%; max-width:1100px; max-height:90vh; overflow:auto;">
+        <h3>🔄 Google Sheets Management
             <span onclick="closeGoogleSyncModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
-        <p style="text-align:center; margin:20px 0 25px;">Sync data via Google Apps Script:</p>
-      
-        <button onclick="syncProductsToSheet()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📦 Sync Products
-        </button>
-      
-        <button onclick="syncInvoicesToSheet()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📄 Sync Invoices / Billing
-        </button>
-      
-        <p style="font-size:13px; color:#666; text-align:center; margin-top:20px;">
-            Auto-sync runs automatically when you generate a new bill.
+
+        <!-- Tabs -->
+        <div style="margin:15px 0; display:flex; gap:10px; border-bottom:2px solid #ddd;">
+            <button id="tabProducts" onclick="showTab('products')" style="flex:1; padding:12px; background:#4caf50; color:white; border:none; border-radius:8px 8px 0 0;">📦 Products</button>
+            <button id="tabInvoices" onclick="showTab('invoices')" style="flex:1; padding:12px; background:#1976d2; color:white; border:none; border-radius:8px 8px 0 0;">📄 Invoices</button>
+        </div>
+
+        <!-- Products Tab -->
+        <div id="productsTab">
+            <input id="productSearchSync" placeholder="Search products..." onkeyup="filterSyncTable('products')" style="margin:12px 0; width:100%;">
+            <table class="table" id="productsSyncTable">
+                <thead><tr><th>Name</th><th>Code</th><th>Category</th><th>Price</th><th>Cost</th><th>Stock</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Invoices Tab -->
+        <div id="invoicesTab" style="display:none;">
+            <input id="invoiceSearchSync" placeholder="Search invoices..." onkeyup="filterSyncTable('invoices')" style="margin:12px 0; width:100%;">
+            <table class="table" id="invoicesSyncTable">
+                <thead><tr><th>Invoice ID</th><th>Date</th><th>Customer</th><th>Total</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <p style="font-size:13px; color:#666; text-align:center; margin-top:15px;">
+            Changes made here are saved directly to Google Sheet.<br>
+            Auto-sync still happens when you generate a new bill.
         </p>
     </div>
 </div>
-
 <script>
 // ================== FIREBASE CONFIG ==================
 const firebaseConfig = {
@@ -248,54 +263,164 @@ function saveConfig() {
     closeConfigModal();
 }
 
-// ================== GOOGLE SHEETS SYNC ==================
+// ================== GOOGLE SHEETS SYNC - INLINE EDITABLE ==================
 function openGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'flex';
+    showTab('products');  // default tab
+    loadSyncProducts();
+    loadSyncInvoices();
 }
 
 function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
-// ←←← PUT YOUR REAL WEB APP URL HERE (very important) ←←←
-const GOOGLE_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
+function showTab(tab) {
+    document.getElementById('productsTab').style.display = tab === 'products' ? 'block' : 'none';
+    document.getElementById('invoicesTab').style.display = tab === 'invoices' ? 'block' : 'none';
+    
+    document.getElementById('tabProducts').style.background = tab === 'products' ? '#2e7d32' : '#4caf50';
+    document.getElementById('tabInvoices').style.background = tab === 'invoices' ? '#1565c0' : '#1976d2';
+}
 
-async function syncProductsToSheet() {
-    closeGoogleSyncModal();
-    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
-        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
-    }
+// Load Products from your Google Web App
+async function loadSyncProducts() {
+    const tbody = document.querySelector('#productsSyncTable tbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">Loading products...</td></tr>';
+    
     try {
-        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncProducts");
-        const text = await response.text();
-        alert("✅ Products synced successfully!\n" + text);
-    } catch (err) {
-        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
+        const res = await fetch(YOUR_GOOGLE_SHEET_URL + '?action=getProducts');
+        const data = await res.json();
+        
+        tbody.innerHTML = '';
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td contenteditable="false">${row.name || ''}</td>
+                <td contenteditable="false">${row.code || ''}</td>
+                <td contenteditable="false">${row.cat || ''}</td>
+                <td contenteditable="false">${row.price || ''}</td>
+                <td contenteditable="false">${row.cost || ''}</td>
+                <td contenteditable="false">${row.qty || ''}</td>
+                <td>
+                    <button onclick="editRow(this)" class="restock-btn" style="margin:2px;">Edit</button>
+                    <button onclick="updateRow(this, '${row.code}', 'products')" class="success-btn" style="margin:2px;display:none;">Update</button>
+                    <button onclick="deleteSyncRow('${row.code}', 'products')" class="delete-btn" style="margin:2px;">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="color:red;text-align:center;">Error loading data. Check your Google Web App URL.</td></tr>';
     }
 }
 
-async function syncInvoicesToSheet() {
-    closeGoogleSyncModal();
-    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) {
-        return alert("❌ Please replace GOOGLE_SCRIPT_WEBAPP_URL with your real deployed Web App URL first!");
-    }
+// Load Invoices
+async function loadSyncInvoices() {
+    const tbody = document.querySelector('#invoicesSyncTable tbody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;">Loading invoices...</td></tr>';
+    
     try {
-        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
-        const text = await response.text();
-        alert("✅ Invoices synced successfully!\n" + text);
-    } catch (err) {
-        alert("❌ Sync failed.\n\nPossible reasons:\n1. Web App not deployed\n2. URL is wrong\n3. Deployment is set to 'Only me' instead of 'Anyone'");
+        const res = await fetch(YOUR_GOOGLE_SHEET_URL + '?action=getInvoices');
+        const data = await res.json();
+        
+        tbody.innerHTML = '';
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.id || ''}</td>
+                <td>${row.date || ''}</td>
+                <td>${row.customer || ''}</td>
+                <td>$${parseFloat(row.total || 0).toLocaleString('es-CO')}</td>
+                <td>
+                    <button onclick="editRow(this)" class="restock-btn" style="margin:2px;">Edit</button>
+                    <button onclick="updateRow(this, '${row.id}', 'invoices')" class="success-btn" style="margin:2px;display:none;">Update</button>
+                    <button onclick="deleteSyncRow('${row.id}', 'invoices')" class="delete-btn" style="margin:2px;">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:red;text-align:center;">Error loading invoices.</td></tr>';
     }
 }
 
-async function autoSyncInvoices() {
-    if (GOOGLE_SCRIPT_WEBAPP_URL.includes("YOUR_WEB_APP_URL") || GOOGLE_SCRIPT_WEBAPP_URL.includes("xxxxxxxxxxxxxxxx")) return;
-    try {
-        await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
-        console.log("✅ Auto-synced invoices");
-    } catch (e) {
-        console.log("Auto-sync skipped");
+function editRow(btn) {
+    const row = btn.parentElement.parentElement;
+    const cells = row.querySelectorAll('td[contenteditable]');
+    cells.forEach(cell => cell.contentEditable = true);
+    btn.style.display = 'none';
+    btn.nextElementSibling.style.display = 'inline-block'; // show Update button
+}
+
+async function updateRow(btn, key, type) {
+    const row = btn.parentElement.parentElement;
+    const cells = row.querySelectorAll('td');
+    
+    let data = {};
+    if (type === 'products') {
+        data = {
+            name: cells[0].innerText,
+            code: cells[1].innerText,
+            cat: cells[2].innerText,
+            price: cells[3].innerText,
+            cost: cells[4].innerText,
+            qty: cells[5].innerText
+        };
+    } else {
+        data = {
+            id: cells[0].innerText,
+            customer: cells[2].innerText,
+            total: cells[3].innerText.replace(/[^0-9.]/g, '')
+        };
     }
+
+    try {
+        await fetch(YOUR_GOOGLE_SHEET_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'update' + (type === 'products' ? 'Product' : 'Invoice'), key: key, data: data })
+        });
+        alert("✅ Row updated successfully!");
+        
+        // Reset to view mode
+        const cellsEditable = row.querySelectorAll('td[contenteditable]');
+        cellsEditable.forEach(cell => cell.contentEditable = false);
+        btn.style.display = 'none';
+        btn.previousElementSibling.style.display = 'inline-block';
+        
+        // Refresh table
+        if (type === 'products') loadSyncProducts();
+        else loadSyncInvoices();
+    } catch(e) {
+        alert("Error updating: " + e.message);
+    }
+}
+
+async function deleteSyncRow(key, type) {
+    if (!confirm(`Delete this ${type === 'products' ? 'product' : 'invoice'}?`)) return;
+    
+    try {
+        await fetch(YOUR_GOOGLE_SHEET_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'delete' + (type === 'products' ? 'Product' : 'Invoice'), key: key })
+        });
+        alert("✅ Deleted successfully!");
+        if (type === 'products') loadSyncProducts();
+        else loadSyncInvoices();
+    } catch(e) {
+        alert("Error deleting");
+    }
+}
+
+function filterSyncTable(type) {
+    const query = (type === 'products' ? document.getElementById('productSearchSync').value : document.getElementById('invoiceSearchSync').value).toLowerCase();
+    const table = document.getElementById(type === 'products' ? 'productsSyncTable' : 'invoicesSyncTable');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
 }
 // ================== SCANNER FUNCTIONS ==================
 function handleScannedCode(decodedText) {
