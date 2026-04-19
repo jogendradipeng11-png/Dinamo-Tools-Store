@@ -252,18 +252,23 @@ function saveConfig() {
 function openGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'flex';
 }
+
 function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
+// ================== OPEN GOOGLE SHEETS ==================
+// Put your actual Google Sheet URL below
+const YOUR_GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1ib3Ezmn9EXViiE0DhVF7xPweoEYY9fytuQ7nuJx_OAs/edit";
+
 function openProductsSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0", "_blank");
+    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=0", "_blank");
 }
 
 function openInvoicesSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=123456789", "_blank");
+    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=123456789", "_blank");   // Change gid if needed
 }
 
 // ================== SCANNER FUNCTIONS ==================
