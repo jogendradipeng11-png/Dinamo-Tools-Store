@@ -49,6 +49,7 @@
 </header>
 
 <div class="container">
+
     <!-- SCANNER -->
     <div class="card">
         <h3>📱 Live Barcode & QR Scanner</h3>
@@ -257,12 +258,12 @@ function closeGoogleSyncModal() {
 
 function openProductsSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/edit#gid=0", "_blank");
+    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0", "_blank");
 }
 
 function openInvoicesSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/edit#gid=123456789", "_blank");
+    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=123456789", "_blank");
 }
 
 // ================== SCANNER FUNCTIONS ==================
@@ -525,6 +526,188 @@ function updateInventorySummary() {
     `;
 }
 
+// ================== FIXED GENERATE BILL FUNCTION ==================
+async function generateBill() {
+    if (cart.length === 0) return alert("Cart is empty!");
+
+    let subtotal = 0;
+    let itemsHTML = '';
+    cart.forEach(item => {
+        const amount = item.qty * (item.price || 0);
+        subtotal += amount;
+        itemsHTML += `
+            <tr>
+                <td style="padding:14px 12px; border-bottom:1px solid #ddd;">${item.name}</td>
+                <td style="padding:14px 12px; text-align:center; border-bottom:1px solid #ddd;">${item.qty}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd;">$${parseFloat(item.price || 0).toLocaleString('es-CO')}</td>
+                <td style="padding:14px 12px; text-align:right; border-bottom:1px solid #ddd; font-weight:600;">$${amount.toLocaleString('es-CO')}</td>
+            </tr>`;
+    });
+
+    const ivaRate = storeConfig.ivaRate || 19;
+    const ivaAmount = subtotal * (ivaRate / 100);
+    const grandTotal = subtotal + ivaAmount;
+
+    const counterRef = db.ref('counters/invoice');
+    const snapshot = await counterRef.once('value');
+    let nextNumber = (snapshot.val() || 0) + 1;
+    await counterRef.set(nextNumber);
+    const invoiceId = "INV-" + String(nextNumber).padStart(6, "0");
+
+    const currentDate = new Date().toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const customer = document.getElementById('customerName').value.trim() || "Cliente General";
+    const customerIdVal = document.getElementById('customerId').value.trim();
+
+    const billHTML = `
+    <div style="max-width:800px; margin:0 auto; background:#ffffff; padding:30px; border:5px solid #1976d2; border-radius:15px; font-family:'Segoe UI',Arial,sans-serif;">
+        <div style="text-align:center; margin-bottom:25px;">
+            <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" style="height:85px; max-width:260px; object-fit:contain; margin-bottom:8px;">
+            <h1 style="margin:8px 0 10px; font-size:32px; color:#1976d2;">Dinamo Tools Sales & Service</h1>
+            <p style="margin:0; font-size:15px; color:#444;">
+                ${storeConfig.address}<br>
+                NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}<br>
+                ${storeConfig.city} • ${storeConfig.email}
+            </p>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-size:15px;">
+            <div>
+                <strong style="color:#1976d2;">Factura No:</strong> ${invoiceId}<br>
+                <strong style="color:#1976d2;">Fecha:</strong> ${currentDate}
+            </div>
+            <div style="text-align:right;">
+                <strong>Cliente:</strong> ${customer}<br>
+                ${customerIdVal ? `<strong>NIT / CC:</strong> ${customerIdVal}` : ''}
+            </div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin:20px 0; font-size:15.5px;">
+            <thead>
+                <tr style="background:#1976d2; color:white;">
+                    <th style="padding:14px 12px; text-align:left;">Producto</th>
+                    <th style="padding:14px 12px; text-align:center;">Cant.</th>
+                    <th style="padding:14px 12px; text-align:right;">Precio Unit.</th>
+                    <th style="padding:14px 12px; text-align:right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>${itemsHTML}</tbody>
+        </table>
+        <div style="text-align:right; margin-top:35px;">
+            <table style="margin-left:auto; width:380px; font-size:16.5px;">
+                <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
+                <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
+                <tr style="font-size:24px; font-weight:bold; color:#1976d2; border-top:4px double #1976d2;">
+                    <td style="padding:16px 0;">TOTAL A PAGAR</td>
+                    <td style="padding:16px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Adjustable Amount -->
+        <div style="margin:25px 0; padding:15px; background:#f0f8ff; border:2px solid #1976d2; border-radius:10px; text-align:center;">
+            <strong>Monto a Pagar (puedes ajustar hacia abajo):</strong><br><br>
+            <input id="adjustAmount" type="number" value="${Math.round(grandTotal)}" 
+                   style="width:200px; font-size:18px; text-align:center; padding:12px; border:2px solid #1976d2; border-radius:8px;" onchange="updatePaymentQRsForPrint()">
+            <div id="adjustedDisplay" style="margin-top:12px; font-size:16px; font-weight:bold; color:#d32f2f;"></div>
+        </div>
+
+        <div class="payment-section">
+            <h3 style="text-align:center; color:#1976d2;">💰 Paga Fácilmente con Nequi o PSE</h3>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:40px; margin-top:20px;">
+                <div style="text-align:center;">
+                    <strong>Nequi QR</strong><br>
+                    <div id="nequiQRPrint" class="qr-container"></div>
+                </div>
+                <div style="text-align:center;">
+                    <strong>PSE QR</strong><br>
+                    <div id="pseQRPrint" class="qr-container"></div>
+                </div>
+            </div>
+        </div>
+        <div style="text-align:center; margin-top:50px; color:#555; font-size:15px;">
+            Gracias por su compra 🛠️ • ¡Vuelva pronto!
+        </div>
+    </div>`;
+
+    document.getElementById('bill').innerHTML = billHTML;
+    document.getElementById('pdfContainer').innerHTML = billHTML;
+
+    setTimeout(updatePaymentQRsForPrint, 300);
+
+    // Auto sync to Google Sheets
+    setTimeout(() => {
+        syncInvoicesToSheet();
+    }, 800);
+
+    lastInvoiceCart = [...cart];
+    cart.forEach(item => {
+        db.ref('products/' + item.code).update({ qty: firebase.database.ServerValue.increment(-item.qty) });
+    });
+    db.ref('invoices/' + invoiceId).set({
+        id: invoiceId,
+        date: new Date().toISOString(),
+        customer: customer,
+        items: cart,
+        subtotal,
+        iva: ivaAmount,
+        total: grandTotal
+    });
+
+    cart = [];
+    renderCart();
+}
+
+function updatePaymentQRsForPrint() {
+    let payAmount = parseFloat(document.getElementById('adjustAmount').value) || 0;
+    if (payAmount <= 0) payAmount = 1000;
+    const amount = Math.round(payAmount);
+
+    const displayDiv = document.getElementById('adjustedDisplay');
+    if (displayDiv) {
+        displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
+    }
+
+    // Nequi QR
+    const nequiDiv = document.getElementById('nequiQRPrint');
+    if (nequiDiv) {
+        nequiDiv.innerHTML = '';
+        const temp = document.createElement('div');
+        new QRCode(temp, { text: `${storeConfig.nequiLink}?amount=${amount}`, width: 200, height: 200 });
+        setTimeout(() => {
+            const canvas = temp.querySelector('canvas');
+            if (canvas) {
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png');
+                img.className = 'qr-image';
+                nequiDiv.appendChild(img);
+            }
+        }, 100);
+    }
+
+    // PSE QR
+    const pseDiv = document.getElementById('pseQRPrint');
+    if (pseDiv) {
+        pseDiv.innerHTML = '';
+        if (storeConfig.pseLink) {
+            const temp = document.createElement('div');
+            new QRCode(temp, { text: `${storeConfig.pseLink}?amount=${amount}`, width: 200, height: 200 });
+            setTimeout(() => {
+                const canvas = temp.querySelector('canvas');
+                if (canvas) {
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/png');
+                    img.className = 'qr-image';
+                    pseDiv.appendChild(img);
+                }
+            }, 100);
+        } else {
+            pseDiv.innerHTML = '<p style="color:#f44336; padding:20px; text-align:center; font-size:12px;">Configure PSE link in Configuration</p>';
+        }
+    }
+}
+
 // ================== PRINT FUNCTIONS ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
@@ -580,7 +763,7 @@ function sendWhatsApp() {
     const amount = parseFloat(document.getElementById('adjustAmount') ? document.getElementById('adjustAmount').value : 0) || 1000;
     const nequiUrl = `${storeConfig.nequiLink}?amount=${amount}`;
     const pseUrl = storeConfig.pseLink ? `${storeConfig.pseLink}?amount=${amount}` : "";
-    let extra = `\n\n💰 Paga direttamente:\nNequi: ${nequiUrl}`;
+    let extra = `\n\n💰 Paga directamente:\nNequi: ${nequiUrl}`;
     if (pseUrl) extra += `\nPSE: ${pseUrl}`;
     const billText = (document.getElementById('bill').innerText || "Dinamo Tools Sales & Service Invoice") + extra;
     window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
