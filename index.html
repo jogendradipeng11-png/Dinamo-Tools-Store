@@ -128,54 +128,23 @@
             height: auto;
         }
 
-        /* ================== STRONG PRINT STYLES - FORCE SINGLE A4 PAGE ================== */
+        /* PRINT STYLES - FORCE SINGLE A4 PAGE */
         @media print {
-            @page {
-                size: A4 portrait;
-                margin: 10mm;
-            }
-            body, html {
-                margin: 0 !important;
-                padding: 0 !important;
-                height: auto;
-            }
-            header, .container > .card:not(#bill-card), #pdfContainer, button, .modal {
-                display: none !important;
-            }
+            @page { size: A4 portrait; margin: 10mm; }
+            body, html { margin: 0 !important; padding: 0 !important; }
+            header, .container > .card:not(#bill-card), button, .modal { display: none !important; }
             #bill {
                 display: block !important;
                 width: 100% !important;
-                max-width: 100% !important;
                 margin: 0 !important;
                 padding: 15px !important;
                 border: 3px solid #1976d2 !important;
-                box-shadow: none !important;
-                page-break-after: avoid !important;
-                page-break-before: avoid !important;
                 break-inside: avoid !important;
             }
-            .invoice-page {
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 auto !important;
-            }
-            .payment-section {
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
-                margin-top: 20px !important;
-                padding: 15px !important;
-            }
-            table, tr, td, th {
-                break-inside: avoid !important;
-            }
-            img {
-                max-width: 100% !important;
-                height: auto !important;
-            }
-            h1 { font-size: 24px !important; margin: 8px 0 !important; }
-            h3 { font-size: 16px !important; }
+            .invoice-page { break-inside: avoid !important; }
+            .payment-section { break-inside: avoid !important; }
+            img { max-width: 100% !important; height: auto !important; }
+            h1 { font-size: 24px !important; }
             p, td, th { font-size: 12px !important; }
             .qr-image { max-width: 190px !important; }
         }
@@ -287,13 +256,10 @@
         <input id="city" placeholder="City" value="Bogotá">
         <label>IVA Rate (%)</label>
         <input id="ivaRate" type="number" step="0.1" value="19">
-       
         <label style="display:block; margin-top:15px; font-weight:600;">💰 Nequi Payment Link</label>
         <input id="nequiLink" value="https://clientes.nequi.com.co/recargas">
-       
-        <label style="display:block; margin-top:15px; font-weight:600;">🏦 PSE Payment Link (Wompi / PayU / ePayco etc.)</label>
+        <label style="display:block; margin-top:15px; font-weight:600;">🏦 PSE Payment Link</label>
         <input id="pseLink" placeholder="Paste your PSE payment link" value="">
-       
         <button onclick="saveConfig()" style="margin-top:20px; padding:14px;">Save Configuration</button>
     </div>
 </div>
@@ -644,7 +610,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== GENERATE BILL - Optimized for Single Page ==================
+// ================== GENERATE BILL WITH ADJUSTABLE AMOUNT ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -725,6 +691,14 @@ async function generateBill() {
             </table>
         </div>
 
+        <!-- Adjustable Payment Amount -->
+        <div style="margin:20px 0; padding:15px; background:#f0f8ff; border:2px solid #1976d2; border-radius:10px; text-align:center;">
+            <strong>Monto a Pagar (puedes ajustar hacia abajo):</strong><br><br>
+            <input id="adjustAmount" type="number" value="${Math.round(grandTotal)}" 
+                   style="width:200px; font-size:18px; text-align:center; padding:12px; border:2px solid #1976d2; border-radius:8px;">
+            <small style="display:block; margin-top:8px; color:#555;">Ejemplo: Cambia 98 → 95</small>
+        </div>
+
         <div class="payment-section">
             <h3 style="text-align:center; color:#1976d2; margin:15px 0 20px;">💰 Paga Fácilmente con Nequi o PSE</h3>
             <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:25px;">
@@ -767,10 +741,14 @@ async function generateBill() {
     renderCart();
 }
 
+// ================== QR GENERATION WITH ADJUSTED AMOUNT ==================
 function updatePaymentQRsForPrint() {
-    const grandTotalEl = document.querySelector('#bill td[style*="font-size:17px"]');
-    const grandTotal = grandTotalEl ? parseFloat(grandTotalEl.innerText.replace(/[^0-9.]/g, '')) : 1000;
-    const amount = Math.round(grandTotal);
+    let payAmount = parseFloat(document.getElementById('adjustAmount').value) || 0;
+    if (payAmount <= 0) {
+        const totalText = document.querySelector('#bill td[style*="font-size:17px"]');
+        payAmount = totalText ? parseFloat(totalText.innerText.replace(/[^0-9.]/g, '')) : 1000;
+    }
+    const amount = Math.round(payAmount);
 
     // Nequi QR
     const nequiDiv = document.getElementById('nequiQRPrint');
@@ -811,7 +789,7 @@ function updatePaymentQRsForPrint() {
     }
 }
 
-// ================== PRINT FUNCTIONS ==================
+// ================== PRINT & OTHER FUNCTIONS ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
     if (!billElement || !billElement.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -858,12 +836,12 @@ function PrintInvoice() {
 }
 
 function printThermalBill() {
-    alert("Thermal print shows payment links.\nFor best QR experience and single page, use normal Print or PDF.");
+    alert("Thermal print shows payment links.\nFor best QR experience use normal Print or PDF.");
     PrintInvoice();
 }
 
 function sendWhatsApp() {
-    const amount = 1000; // fallback
+    const amount = parseFloat(document.getElementById('adjustAmount') ? document.getElementById('adjustAmount').value : 0) || 1000;
     const nequiUrl = `${storeConfig.nequiLink}?amount=${amount}`;
     const pseUrl = storeConfig.pseLink ? `${storeConfig.pseLink}?amount=${amount}` : "";
     let extra = `\n\n💰 Paga directamente:\nNequi: ${nequiUrl}`;
