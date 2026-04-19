@@ -610,7 +610,7 @@ function updateInventorySummary() {
     `;
 }
 
-// ================== GENERATE BILL WITH ADJUSTABLE AMOUNT ==================
+// ================== GENERATE BILL WITH ADJUSTED AMOUNT (Fixed for Print) ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -686,7 +686,7 @@ async function generateBill() {
                 <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
                 <tr style="font-size:17px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
                     <td style="padding:10px 0;">TOTAL A PAGAR</td>
-                    <td style="padding:10px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+                    <td id="originalTotal" style="padding:10px 0; text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
@@ -741,14 +741,28 @@ async function generateBill() {
     renderCart();
 }
 
-// ================== QR GENERATION WITH ADJUSTED AMOUNT ==================
+// ================== UPDATED QR + PRINT ADJUSTED AMOUNT ==================
 function updatePaymentQRsForPrint() {
     let payAmount = parseFloat(document.getElementById('adjustAmount').value) || 0;
     if (payAmount <= 0) {
-        const totalText = document.querySelector('#bill td[style*="font-size:17px"]');
+        const totalText = document.getElementById('originalTotal');
         payAmount = totalText ? parseFloat(totalText.innerText.replace(/[^0-9.]/g, '')) : 1000;
     }
     const amount = Math.round(payAmount);
+
+    // Show adjusted amount in the bill (this will be printed)
+    const adjustInput = document.getElementById('adjustAmount');
+    if (adjustInput) {
+        const displayAmount = document.createElement('div');
+        displayAmount.style.cssText = 'margin-top:12px; font-size:16px; font-weight:bold; color:#1976d2;';
+        displayAmount.innerHTML = `Monto Ajustado a Pagar: <strong>$${amount.toLocaleString('es-CO')}</strong>`;
+        const parent = adjustInput.parentElement;
+        // Remove previous display if exists
+        const old = parent.querySelector('.adjusted-display');
+        if (old) old.remove();
+        displayAmount.className = 'adjusted-display';
+        parent.appendChild(displayAmount);
+    }
 
     // Nequi QR
     const nequiDiv = document.getElementById('nequiQRPrint');
@@ -789,7 +803,7 @@ function updatePaymentQRsForPrint() {
     }
 }
 
-// ================== PRINT & OTHER FUNCTIONS ==================
+// ================== PRINT FUNCTIONS ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
     if (!billElement || !billElement.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
