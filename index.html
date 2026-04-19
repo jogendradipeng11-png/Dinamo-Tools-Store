@@ -162,18 +162,18 @@
         <h3>🔄 Google Sheets Synchronization
             <span onclick="closeGoogleSyncModal()" style="float:right; cursor:pointer; font-size:28px;">×</span>
         </h3>
-        <p style="text-align:center; margin:20px 0 25px;">Open Google Sheet to Edit, Delete or Update data:</p>
-        
-        <button onclick="openProductsSheet()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📦 Open Products Sheet (Edit / Delete / Update)
+        <p style="text-align:center; margin:20px 0 25px;">Sync data via Google Apps Script:</p>
+      
+        <button onclick="syncProductsToSheet()" style="background:#4caf50; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📦 Sync Products
         </button>
-        
-        <button onclick="openInvoicesSheet()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
-            📄 Open Invoices / Billing Sheet (Edit / Delete / Update)
+      
+        <button onclick="syncInvoicesToSheet()" style="background:#1976d2; padding:14px; margin:8px 0; width:100%; font-size:16px;">
+            📄 Sync Invoices / Billing
         </button>
-        
+      
         <p style="font-size:13px; color:#666; text-align:center; margin-top:20px;">
-            Auto-sync happens when you generate new bills.
+            Auto-sync runs automatically when you generate a new bill.
         </p>
     </div>
 </div>
@@ -257,20 +257,40 @@ function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
-// ================== OPEN GOOGLE SHEETS ==================
-// Put your actual Google Sheet URL below
-const YOUR_GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1ib3Ezmn9EXViiE0DhVF7xPweoEYY9fytuQ7nuJx_OAs/edit";
+// ←←← PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE ←←←
+const GOOGLE_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
 
-function openProductsSheet() {
+async function syncProductsToSheet() {
     closeGoogleSyncModal();
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=0", "_blank");
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncProducts");
+        const text = await response.text();
+        alert("✅ Products synced successfully to Google Sheets!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\nMake sure the Web App is deployed and the URL is correct.");
+    }
 }
 
-function openInvoicesSheet() {
+async function syncInvoicesToSheet() {
     closeGoogleSyncModal();
-    window.open(YOUR_GOOGLE_SHEET_URL + "#gid=123456789", "_blank");   // Change gid if needed
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        const text = await response.text();
+        alert("✅ Invoices synced successfully to Google Sheets!\n" + text);
+    } catch (err) {
+        alert("❌ Sync failed.\nMake sure the Web App is deployed and the URL is correct.");
+    }
 }
 
+// Auto-sync function (called automatically after generating bill)
+async function autoSyncInvoices() {
+    try {
+        await fetch(GOOGLE_SCRIPT_WEBAPP_URL + "?action=syncInvoices");
+        console.log("✅ Invoices auto-synced to Google Sheets");
+    } catch (e) {
+        console.log("Auto-sync skipped");
+    }
+}
 // ================== SCANNER FUNCTIONS ==================
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
@@ -659,7 +679,8 @@ async function generateBill() {
         iva: ivaAmount,
         total: grandTotal
     });
-
+// Auto sync to Google Sheets after saving invoice
+setTimeout(autoSyncInvoices, 800);
     cart = [];
     renderCart();
 }
