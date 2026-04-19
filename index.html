@@ -262,7 +262,7 @@
         </button>
         
         <p style="font-size:13px; color:#666; text-align:center; margin-top:20px;">
-            Auto-sync happens automatically when you generate new bills.
+            Auto-sync happens when you generate new bills.
         </p>
     </div>
 </div>
@@ -345,16 +345,15 @@ function closeGoogleSyncModal() {
     document.getElementById('googleSyncModal').style.display = 'none';
 }
 
-// Open Products Sheet for Edit/Delete/Update
+// Open Google Sheet for Edit/Delete/Update
 function openProductsSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0", "_blank");
+    window.open("https://docs.google.com/spreadsheets/d/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/edit#gid=0", "_blank");
 }
 
-// Open Invoices Sheet for Edit/Delete/Update
 function openInvoicesSheet() {
     closeGoogleSyncModal();
-    window.open("https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=123456789", "_blank"); // Change gid if needed
+    window.open("https://docs.google.com/spreadsheets/d/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/edit#gid=123456789", "_blank"); // Change gid if needed
 }
 
 // ================== AUTO SYNC ON BILL GENERATION ==================
@@ -458,10 +457,9 @@ async function generateBill() {
 
     setTimeout(updatePaymentQRsForPrint, 300);
 
-    // AUTO SYNC when new bill is generated
+    // Auto sync to Google Sheets when new bill is generated
     setTimeout(() => {
-        console.log("Auto-syncing invoice to Google Sheets...");
-        // You can replace with real fetch to your Google Web App later
+        syncInvoicesToSheet();
     }, 800);
 
     lastInvoiceCart = [...cart];
@@ -483,12 +481,15 @@ async function generateBill() {
 }
 
 function updatePaymentQRsForPrint() {
-    // Your existing QR code logic
     let payAmount = parseFloat(document.getElementById('adjustAmount') ? document.getElementById('adjustAmount').value : 0) || 0;
     if (payAmount <= 0) payAmount = 1000;
     const amount = Math.round(payAmount);
 
-    // Nequi QR
+    const displayDiv = document.getElementById('adjustedDisplay');
+    if (displayDiv) {
+        displayDiv.innerHTML = `Monto Ajustado a Pagar: <strong style="color:#1976d2;">$${amount.toLocaleString('es-CO')}</strong>`;
+    }
+
     const nequiDiv = document.getElementById('nequiQRPrint');
     if (nequiDiv) {
         nequiDiv.innerHTML = '';
@@ -505,7 +506,6 @@ function updatePaymentQRsForPrint() {
         }, 100);
     }
 
-    // PSE QR
     const pseDiv = document.getElementById('pseQRPrint');
     if (pseDiv) {
         pseDiv.innerHTML = '';
@@ -527,7 +527,7 @@ function updatePaymentQRsForPrint() {
     }
 }
 
-// ================== PRINT FUNCTIONS (unchanged) ==================
+// ================== PRINT FUNCTIONS ==================
 function downloadPDF() {
     const billElement = document.getElementById('bill');
     if (!billElement || !billElement.innerHTML.trim()) return alert("❌ Please generate the invoice first!");
@@ -588,7 +588,6 @@ function sendWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(billText)}`, '_blank');
 }
 
-// ================== Other helper functions (unchanged) ==================
 function uploadFromFile() { document.getElementById('pimage').click(); }
 function captureProductPhoto() {
     alert("Use 'Upload from Gallery' instead.");
@@ -610,7 +609,23 @@ function restoreStock() {
     alert("✅ Stock restored!");
 }
 
-// ================== Initialize ==================
+// ================== LOAD DATA & OTHER FUNCTIONS (unchanged) ==================
+function loadData() {
+    db.ref('storeConfig').once('value', snap => {
+        if (snap.val()) storeConfig = { ...storeConfig, ...snap.val() };
+    });
+    db.ref('products').on('value', (snap) => {
+        products = snap.val() ? Object.values(snap.val()) : [];
+        products.forEach(p => {
+            p.minStock = p.minStock || 5;
+            p.qty = p.qty || 0;
+        });
+        renderProductList();
+        updateInventorySummary();
+    });
+}
+
+// Initialize
 window.onload = () => {
     loadData();
 };
