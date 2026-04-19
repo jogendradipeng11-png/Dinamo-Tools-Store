@@ -207,7 +207,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
-
+    // ================== GOOGLE SHEETS SYNC URL ==================
+// ←←← REPLACE THIS WITH YOUR NEW DEPLOYED WEB APP URL ←←←
+const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyx7lGktPnkZ8w1Ch9QIRcwslv5zfn7ty13Bejy_XhtSxMznmk26hM7Zsm2qmGkvyej/exec";
 let products = [];
 let cart = [];
 let lastInvoiceCart = [];
