@@ -261,6 +261,7 @@ let html5QrCode = null;
 let isFlashOn = false;
 let scanMode = 'addProduct';
 let editMode = null;
+let adjustedTotal = 0;
 
 let storeConfig = {
     logoUrl: "https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png",
@@ -729,6 +730,7 @@ function updateInventorySummary() {
 }
 
 // ================== FIXED GENERATE BILL FUNCTION (Single Page + Same in Print & PDF) ==================
+// ================== FIXED GENERATE BILL FUNCTION (with proper Adjusted Amount) ==================
 async function generateBill() {
     if (cart.length === 0) return alert("Cart is empty!");
 
@@ -751,36 +753,40 @@ async function generateBill() {
     const ivaAmount = subtotal * (ivaRate / 100);
     const grandTotal = subtotal + ivaAmount;
 
+    // === Invoice Number ===
     const counterRef = db.ref('counters/invoice');
     const snapshot = await counterRef.once('value');
     let nextNumber = (snapshot.val() || 0) + 1;
     await counterRef.set(nextNumber);
     const invoiceId = "INV-" + String(nextNumber).padStart(6, "0");
 
-    const currentDate = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const currentDate = new Date().toLocaleString('es-CO', { 
+        timeZone: 'America/Bogota', 
+        year: 'numeric', month: 'long', day: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
+    });
 
     const customer = document.getElementById('customerName').value.trim() || "Cliente General";
-    const customerIdVal = document.getElementById('customerId').value.trim();
 
     const itemCount = cart.length;
-
-    // Ultra aggressive settings
     let scale = 1;
     if (itemCount >= 20) scale = 0.82;
     else if (itemCount >= 15) scale = 0.88;
     else if (itemCount >= 10) scale = 0.94;
 
+    // Store the current adjusted total globally
+    adjustedTotal = Math.round(grandTotal);   // ← Global variable (must be declared outside)
+
     const billHTML = `
     <div class="invoice-container" style="transform: scale(${scale});">
         <div style="text-align:center; margin-bottom:8px;">
-            <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" 
+            <img src="${storeConfig.logoUrl || 'https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png'}"
                  style="height:48px; max-width:200px; object-fit:contain; margin-bottom:4px;">
-            <h1 style="margin:4px 0 5px; font-size:21px; color:#1976d2;">Dinamo Tools Sales & Service</h1>
+            <h1 style="margin:4px 0 5px; font-size:21px; color:#1976d2;">${storeConfig.businessName || 'Dinamo Tools Sales & Service'}</h1>
             <p style="margin:0; font-size:11.5px; color:#444; line-height:1.25;">
                 ${storeConfig.address}<br>NIT: ${storeConfig.nit} | Tel: ${storeConfig.mobile}
             </p>
         </div>
-
         <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:12.5px; background:#f8f9fa; padding:8px; border-radius:6px;">
             <div><strong>Factura:</strong> ${invoiceId}<br><strong>Fecha:</strong> ${currentDate}</div>
             <div style="text-align:right;"><strong>Cliente:</strong> ${customer}</div>
@@ -803,16 +809,20 @@ async function generateBill() {
                 <tr><td>Subtotal:</td><td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td></tr>
                 <tr><td>IVA (${ivaRate}%):</td><td style="text-align:right;">$${ivaAmount.toLocaleString('es-CO')}</td></tr>
                 <tr style="font-size:18px; font-weight:bold; color:#1976d2; border-top:3px double #1976d2;">
-                    <td>TOTAL</td><td style="text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
+                    <td>TOTAL CALCULADO</td><td style="text-align:right;">$${grandTotal.toLocaleString('es-CO')}</td>
                 </tr>
             </table>
         </div>
 
-        <div style="margin:10px 0; padding:9px; background:#f0f8ff; border:2px solid #1976d2; border-radius:8px; text-align:center; font-size:13px;">
-            <strong>Monto a Pagar:</strong> 
-            <input id="adjustAmount" type="number" value="${Math.round(grandTotal)}" 
-                   style="width:160px; font-size:14px; text-align:center; padding:6px; margin-top:4px;" 
-                   onchange="updatePaymentQRsForPrint()">
+        <!-- === IMPROVED ADJUSTED AMOUNT SECTION === -->
+        <div style="margin:15px 0; padding:12px; background:#f0f8ff; border:3px solid #1976d2; border-radius:10px; text-align:center;">
+            <strong style="font-size:15px; color:#1976d2;">MONTO A PAGAR (Puedes ajustar):</strong><br><br>
+            <input id="adjustAmount" type="number" value="${adjustedTotal}"
+                   style="width:240px; font-size:24px; text-align:center; padding:10px; font-weight:bold; border:2px solid #1976d2; border-radius:8px;"
+                   onchange="updateAdjustedAmount()">
+            <div id="adjustedDisplay" style="margin-top:10px; font-size:20px; font-weight:700; color:#2e7d32;">
+                $${adjustedTotal.toLocaleString('es-CO')}
+            </div>
         </div>
 
         <div class="payment-section">
@@ -823,26 +833,59 @@ async function generateBill() {
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:10px; color:#555; font-size:12.5px;">
+        <div style="text-align:center; margin-top:15px; color:#555; font-size:12.5px;">
             Gracias por su compra 🛠️ • ¡Vuelva pronto!
         </div>
     </div>`;
 
+    // Render invoice
     document.getElementById('bill').innerHTML = billHTML;
     document.getElementById('pdfContainer').innerHTML = billHTML;
 
-    setTimeout(updatePaymentQRsForPrint, 400);
+    // Generate QR codes
+    setTimeout(updatePaymentQRsForPrint, 300);
 
-    // ... (keep your existing save logic, stock update, Firebase, sync, etc.)
+    // === Save logic (keep your existing code) ===
     lastInvoiceCart = [...cart];
-    cart.forEach(item => db.ref('products/' + item.code).update({ qty: firebase.database.ServerValue.increment(-item.qty) }));
+    cart.forEach(item => {
+        db.ref('products/' + item.code).update({ 
+            qty: firebase.database.ServerValue.increment(-item.qty) 
+        });
+    });
 
-    db.ref('invoices/' + invoiceId).set({ /* your existing data */ });
+    db.ref('invoices/' + invoiceId).set({
+        id: invoiceId,
+        date: currentDate,
+        customer: customer,
+        customerId: customerIdVal,
+        subtotal: subtotal,
+        iva: ivaAmount,
+        total: grandTotal,
+        adjustedTotal: adjustedTotal,
+        items: lastInvoiceCart
+    });
 
-    setTimeout(() => { syncInvoicesToSheet(); autoSyncInvoices(); }, 800);
+    setTimeout(() => { 
+        if (typeof syncInvoicesToSheet === 'function') syncInvoicesToSheet();
+        if (typeof autoSyncInvoices === 'function') autoSyncInvoices();
+    }, 800);
 
     cart = [];
     renderCart();
+}
+    // === ADD HERE ===
+function updateAdjustedAmount() {
+    const input = document.getElementById('adjustAmount');
+    if (!input) return;
+
+    adjustedTotal = parseFloat(input.value) || 0;
+
+    const display = document.getElementById('adjustedDisplay');
+    if (display) {
+        display.textContent = '$' + adjustedTotal.toLocaleString('es-CO');
+    }
+
+    updatePaymentQRsForPrint();
 }
 
 function updatePaymentQRsForPrint() {
@@ -945,54 +988,58 @@ function printThermalBill() {
         return alert("❌ Please generate the invoice first!");
     }
 
-    // Get the adjusted amount if user changed it
-    const adjustInput = document.getElementById('adjustAmount');
-    const totalAmount = adjustInput ? parseFloat(adjustInput.value) : 0;
-
-    // Use lastInvoiceCart because cart is already cleared after generateBill()
     if (lastInvoiceCart.length === 0) {
         return alert("No invoice data found. Please generate bill again.");
     }
 
     let receipt = `================================\n`;
-    receipt += `     DINAMO TOOLS SALES\n`;
-    receipt += `        & SERVICE\n`;
+    receipt += ` DINAMO TOOLS SALES\n`;
+    receipt += ` & SERVICE\n`;
     receipt += `================================\n\n`;
-    receipt += `Factura No : INV-XXXXXX\n`;   // You can improve this later
-    receipt += `Fecha      : ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}\n`;
-    receipt += `Cliente    : ${document.getElementById('customerName').value.trim() || 'Cliente General'}\n\n`;
 
-    receipt += `PRODUCTO                CANT   TOTAL\n`;
+    // Better invoice number (you can improve this further later)
+    const invoiceId = document.getElementById('bill').innerHTML.includes('Factura:') 
+        ? document.getElementById('bill').innerHTML.match(/Factura:\s*([A-Z0-9-]+)/)?.[1] || "INV-XXXXXX" 
+        : "INV-XXXXXX";
+
+    receipt += `Factura No : ${invoiceId}\n`;
+    receipt += `Fecha : ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}\n`;
+    receipt += `Cliente : ${document.getElementById('customerName').value.trim() || 'Cliente General'}\n\n`;
+
+    receipt += `PRODUCTO          CANT   TOTAL\n`;
     receipt += `------------------------------------\n`;
 
     lastInvoiceCart.forEach(item => {
         const shortName = item.name.length > 22 ? item.name.substring(0, 22) + ".." : item.name;
         const lineTotal = (item.qty * (item.price || 0)).toLocaleString('es-CO');
-        receipt += `${shortName.padEnd(24)} ${item.qty.toString().padStart(3)}  $${lineTotal}\n`;
+        receipt += `${shortName.padEnd(22)} ${item.qty.toString().padStart(3)}  $${lineTotal}\n`;
     });
 
     receipt += `------------------------------------\n`;
 
     const subtotal = lastInvoiceCart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
-    const iva = subtotal * (storeConfig.ivaRate || 19) / 100;
-    const grandTotal = subtotal + iva;
+    const ivaRate = storeConfig.ivaRate || 19;
+    const iva = subtotal * (ivaRate / 100);
+
+    // === USE GLOBAL adjustedTotal ===
+    const finalTotal = Math.round(adjustedTotal || (subtotal + iva));
 
     receipt += `Subtotal          $${subtotal.toLocaleString('es-CO')}\n`;
-    receipt += `IVA (${storeConfig.ivaRate || 19}%)     $${iva.toLocaleString('es-CO')}\n`;
-    receipt += `TOTAL A PAGAR     $${Math.round(totalAmount || grandTotal).toLocaleString('es-CO')}\n\n`;
+    receipt += `IVA (${ivaRate}%)      $${iva.toLocaleString('es-CO')}\n`;
+    receipt += `TOTAL A PAGAR     $${finalTotal.toLocaleString('es-CO')}\n\n`;
 
     receipt += `================================\n`;
-    receipt += `       ¡GRACIAS POR SU COMPRA!\n`;
-    receipt += `          Vuelva pronto 🛠️\n`;
+    receipt += ` ¡GRACIAS POR SU COMPRA!\n`;
+    receipt += ` Vuelva pronto 🛠️\n`;
     receipt += `================================\n\n`;
 
     receipt += `💰 PAGA FÁCILMENTE:\n`;
     receipt += `Nequi → ${storeConfig.nequiLink}\n`;
     if (storeConfig.pseLink) {
-        receipt += `PSE   → ${storeConfig.pseLink}\n`;
+        receipt += `PSE → ${storeConfig.pseLink}\n`;
     }
 
-    // Open in new window formatted for thermal printer
+    // Open thermal print window
     const thermalWindow = window.open('', '_blank');
     thermalWindow.document.write(`
         <!DOCTYPE html>
@@ -1017,22 +1064,21 @@ function printThermalBill() {
         </body>
         </html>
     `);
-
     thermalWindow.document.close();
 }
-
 function sendWhatsApp() {
     if (lastInvoiceCart.length === 0) {
         return alert("❌ Please generate the invoice first!");
     }
 
-    const adjustAmountEl = document.getElementById('adjustAmount');
-    const finalAmount = adjustAmountEl ? parseFloat(adjustAmountEl.value) : 0;
-
     let message = `🛠️ *DINAMO TOOLS SALES & SERVICE*\n\n`;
 
     // Invoice Header
-    message += `📄 *Factura:* INV-XXXXXX\n`;   // You can improve this later to show real ID
+    const invoiceId = document.getElementById('bill').innerHTML.includes('Factura:') 
+        ? document.getElementById('bill').innerHTML.match(/Factura:\s*([A-Z0-9-]+)/)?.[1] || "INV-XXXXXX" 
+        : "INV-XXXXXX";
+
+    message += `📄 *Factura:* ${invoiceId}\n`;
     message += `📅 *Fecha:* ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', {hour: '2-digit', minute: '2-digit'})}\n`;
     message += `👤 *Cliente:* ${document.getElementById('customerName').value.trim() || 'Cliente General'}\n\n`;
 
@@ -1043,25 +1089,27 @@ function sendWhatsApp() {
     lastInvoiceCart.forEach(item => {
         const itemTotal = (item.qty * (item.price || 0)).toLocaleString('es-CO');
         message += `• ${item.name}\n`;
-        message += `   ×${item.qty}   $${itemTotal}\n\n`;
+        message += ` ×${item.qty} $${itemTotal}\n\n`;
     });
 
     // Totals
     const subtotal = lastInvoiceCart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
     const ivaRate = storeConfig.ivaRate || 19;
     const ivaAmount = subtotal * (ivaRate / 100);
-    const grandTotal = subtotal + ivaAmount;
+
+    // === USE GLOBAL adjustedTotal ===
+    const finalTotal = Math.round(adjustedTotal || (subtotal + ivaAmount));
 
     message += `────────────────────\n`;
-    message += `Subtotal     : $${subtotal.toLocaleString('es-CO')}\n`;
-    message += `IVA (${ivaRate}%)    : $${ivaAmount.toLocaleString('es-CO')}\n`;
-    message += `*TOTAL A PAGAR:* *$${Math.round(finalAmount || grandTotal).toLocaleString('es-CO')}*\n\n`;
+    message += `Subtotal : $${subtotal.toLocaleString('es-CO')}\n`;
+    message += `IVA (${ivaRate}%) : $${ivaAmount.toLocaleString('es-CO')}\n`;
+    message += `*TOTAL A PAGAR:* *$${finalTotal.toLocaleString('es-CO')}*\n\n`;
 
-    // Payment Links
+    // Payment Links with adjusted amount
     message += `💰 *Paga fácilmente con:*\n`;
-    const amountForLink = Math.round(finalAmount || grandTotal);
+    const amountForLink = finalTotal;
     message += `🔹 *Nequi:* ${storeConfig.nequiLink}?amount=${amountForLink}\n`;
-    
+   
     if (storeConfig.pseLink) {
         message += `🔹 *PSE:* ${storeConfig.pseLink}?amount=${amountForLink}\n`;
     }
