@@ -85,69 +85,11 @@
     </style>
 </head>
 <body>
-    <!-- AUTH SCREEN -->
-<div id="authScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f4f6f9; font-family:Segoe UI;">
-    <div style="background:white; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:420px; margin:20px;">
-        
-        <div style="text-align:center; margin-bottom:25px;">
-            <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" 
-                 style="height:80px; margin-bottom:10px;">
-            <h2>Dinamo Tools POS</h2>
-            <p style="color:#666;">Sales & Service System</p>
-        </div>
-
-        <!-- Login Form -->
-        <div id="loginForm">
-            <h3>🔑 Login</h3>
-            <input id="loginEmail" type="email" placeholder="Email Address" style="margin-bottom:12px;">
-            <input id="loginPassword" type="password" placeholder="Password" style="margin-bottom:12px;">
-            
-            <button onclick="loginUser()" style="width:100%; padding:14px; margin:10px 0;">Login</button>
-            
-            <div style="text-align:center; margin:15px 0;">
-                <a href="#" onclick="forgotPassword(); return false;" style="color:#1976d2; font-size:14px;">Forgot Password?</a>
-            </div>
-            
-            <p style="text-align:center; margin:20px 0;">
-                Don't have an account? 
-                <a href="#" onclick="toggleAuthForms(); return false;" style="color:#1976d2;">Sign Up</a>
-            </p>
-        </div>
-
-        <!-- Sign Up Form (Hidden by default) -->
-        <div id="signupForm" style="display:none;">
-            <h3>📝 Create New Account</h3>
-            <input id="signupEmail" type="email" placeholder="Email Address" style="margin-bottom:12px;">
-            <input id="signupPassword" type="password" placeholder="Password (min 6 chars)" style="margin-bottom:12px;">
-            <input id="signupConfirmPassword" type="password" placeholder="Confirm Password" style="margin-bottom:20px;">
-            
-            <button onclick="signupUser()" style="width:100%; padding:14px; margin-bottom:12px; background:#2e7d32;">Create Account</button>
-            
-            <p style="text-align:center;">
-                Already have an account? 
-                <a href="#" onclick="toggleAuthForms(); return false;" style="color:#1976d2;">Login</a>
-            </p>
-        </div>
-
-        <div style="text-align:center; margin-top:20px; font-size:13px; color:#888;">
-            Secured by Firebase
-        </div>
-    </div>
-</div>
 <header>
     <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
-    
-    <div style="margin-top: 10px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-        <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">⚙️ Configuration</button>
-        <button onclick="openGoogleSyncModal()" style="background:#4caf50; padding:8px 20px; font-size:15px;">🔄 Google Sheets Sync</button>
-        
-        <!-- NEW LOGOUT BUTTON -->
-        <button onclick="logoutUser()" 
-                style="background:#f44336; color:white; padding:8px 20px; font-size:15px; border:none; border-radius:8px; cursor:pointer;">
-            🚪 Logout
-        </button>
-    </div>
+    <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px; margin-top:8px;">⚙️ Configuration</button>
+    <button onclick="openGoogleSyncModal()" style="background:#4caf50; padding:8px 20px; font-size:15px; margin-top:8px; margin-left:8px;">🔄 Google Sheets Sync</button>
 </header>
 
 <div class="container">
@@ -157,11 +99,6 @@
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
-     <!-- ADD THE NEW MESSAGE HERE -->
-        <p style="text-align:center; font-size:14px; color:#d32f2f; margin:10px 0;">
-            <strong>On iPhone:</strong> Live scanner can be slow/unreliable.<br>
-            Use <strong>"Scan from Photo"</strong> button for best results.
-        </p>
         <p class="scanner-note">⚠️ Important: Must be opened with HTTPS. Best on mobile.</p>
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
@@ -314,22 +251,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
-const auth = firebase.auth();   // ← Important for login
-
-// ================== NEW: AUTHENTICATION HELPER FUNCTIONS ==================
-
-function toggleAuthForms() {
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-   
-    if (loginForm.style.display === 'none') {
-        loginForm.style.display = 'block';
-        signupForm.style.display = 'none';
-    } else {
-        loginForm.style.display = 'none';
-        signupForm.style.display = 'block';
-    }
-}
     // ================== GOOGLE SHEETS SYNC URL ==================
 // ←←← REPLACE THIS WITH YOUR NEW DEPLOYED WEB APP URL ←←←
 const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwgW7Fr7koGHrKLrGe0qFqr6252SPSl5cSN2PUV6siVXdVmpinoHhiTFeUD-ZGQ6vYU/exec";
@@ -354,89 +275,7 @@ let storeConfig = {
     nequiLink: "https://clientes.nequi.com.co/recargas",
     pseLink: ""
 };
-// ================== AUTHENTICATION FUNCTIONS ==================
 
-// Show Login Screen
-function showLoginScreen() {
-    document.getElementById('mainApp').style.display = 'none';
-    document.getElementById('authScreen').style.display = 'flex';
-}
-
-// Show Main POS App (after login)
-function showMainApp() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    loadData();   // Load products etc.
-}
-
-// Login
-async function loginUser() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) return alert("Please enter email and password");
-
-    try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        currentUser = userCredential.user;
-        alert(`✅ Welcome, ${currentUser.email}`);
-        showMainApp();
-    } catch (error) {
-        alert("Login Failed: " + error.message);
-    }
-}
-
-// Sign Up (Register New User)
-async function signupUser() {
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const confirmPass = document.getElementById('signupConfirmPassword').value;
-
-    if (password !== confirmPass) return alert("Passwords do not match!");
-    if (password.length < 6) return alert("Password must be at least 6 characters");
-
-    try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        currentUser = userCredential.user;
-        alert("✅ Account created successfully! You are now logged in.");
-        showMainApp();
-    } catch (error) {
-        alert("Sign Up Failed: " + error.message);
-    }
-}
-
-// Forgot Password
-async function forgotPassword() {
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) return alert("Enter your email address first");
-
-    try {
-        await auth.sendPasswordResetEmail(email);
-        alert("✅ Password reset link sent to your email. Please check your inbox.");
-    } catch (error) {
-        alert("Error: " + error.message);
-    }
-}
-
-// Logout
-function logoutUser() {
-    if (confirm("Are you sure you want to logout?")) {
-        auth.signOut().then(() => {
-            currentUser = null;
-            showLoginScreen();
-        });
-    }
-}
-
-// Check Auth State (Auto login if already signed in)
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        showMainApp();
-    } else {
-        showLoginScreen();
-    }
-});
 // ================== CONFIG MODAL ==================
 function openConfigModal() {
     document.getElementById('configModal').style.display = 'flex';
@@ -634,10 +473,7 @@ function filterSyncTable(type) {
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
-
     if (html5QrCode) html5QrCode.pause(true);
-
-    // Check current scan mode
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
@@ -648,8 +484,7 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found: ${code}`;
         }
-    } 
-    else if (scanMode === 'editProduct') {
+    } else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) {
             editProduct(code);
@@ -659,89 +494,30 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found`;
         }
-    } 
-    else {
-        // === DEFAULT BEHAVIOR WHEN CAMERA IS OPENED NORMALLY ===
-        const product = products.find(p => p.code === code);
-
-        if (product) {
-            // Existing product → Load all details into "Add / Update Product" form
-            editProduct(code);
-            // After editProduct(code);  add this line:
-                document.getElementById('pqty').focus();
-                document.getElementById('pqty').select();
-            statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Product Found: ${product.name} → Ready to update stock`;
-        } else {
-            // New product → Only fill the barcode/code field
-            document.getElementById('pname').value = '';
-            document.getElementById('pcode').value = code;
-            document.getElementById('pcat').value = '';
-            document.getElementById('pprice').value = '';
-            document.getElementById('pcost').value = '';
-            document.getElementById('pqty').value = '0';
-            document.getElementById('pminstock').value = '5';
-            document.getElementById('imagePreview').innerHTML = '';
-
-            editMode = null;   // Not editing existing product
-
-            statusEl.style.color = "#ff9800";
-            statusEl.textContent = `🆕 New Product - Code: ${code}. Fill details and click Save Product`;
-        }
+    } else {
+        document.getElementById('pcode').value = code;
+        statusEl.style.color = "#2e7d32";
+        statusEl.textContent = `✅ Scanned Code: ${code}`;
     }
-
-    // Reset scan mode back to default
     scanMode = 'addProduct';
-
-    // Resume camera after short delay
-    if (html5QrCode) {
-        setTimeout(() => html5QrCode.resume(), 1800);
-    }
+    if (html5QrCode) setTimeout(() => html5QrCode.resume(), 1500);
 }
+
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Requesting camera access...";
     statusEl.style.color = "#1976d2";
-
-    if (html5QrCode) {
-        await html5QrCode.stop().catch(() => {});
-    }
-
+    if (html5QrCode) await html5QrCode.stop().catch(() => {});
     html5QrCode = new Html5Qrcode("reader");
-
-    const config = {
-        fps: 10,                    // Lower FPS often more stable on iOS
-        qrbox: { width: 280, height: 280 },   // Slightly larger scanning area
-        aspectRatio: 1.0,           // Square view — better for iPhone
-        disableFlip: false,
-        rememberLastUsedCamera: true,
-        // Try to force higher quality if possible
-        videoConstraints: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        }
-    };
-
+    const config = { fps: 15, qrbox: 250, aspectRatio: 1.777 };
     try {
-        await html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            handleScannedCode,
-            (error) => {
-                // Optional: quiet error logging
-                console.log("Scan error (normal):", error);
-            }
-        );
-
+        await html5QrCode.start({ facingMode: "environment" }, config, handleScannedCode, () => {});
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "✅ Scanner ready — Hold QR code steady inside the box";
+        statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
-        console.error(err);
         statusEl.style.color = "#d32f2f";
-        statusEl.textContent = "❌ Camera error. Try 'Scan from Photo' instead.";
-        alert("Camera start failed. On iPhone, try the 'Scan from Photo' button — it usually works better.");
+        statusEl.textContent = "❌ Camera error. Please allow access and retry.";
     }
 }
 
@@ -764,23 +540,12 @@ function startFileScan() {
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
-    statusEl.textContent = "Processing photo...";
-    statusEl.style.color = "#1976d2";
-
+    statusEl.textContent = "Processing image...";
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-
-    html5QrCode.scanFile(e.target.files[0], true)  // true = verbose
-        .then(decodedText => {
-            handleScannedCode(decodedText);
-            statusEl.style.color = "#2e7d32";
-            statusEl.textContent = `✅ Scanned: ${decodedText}`;
-        })
-        .catch(err => {
-            console.error(err);
-            statusEl.style.color = "#d32f2f";
-            statusEl.textContent = "❌ Could not read QR from this photo. Try another angle/lighting.";
-        });
-});;
+    html5QrCode.scanFile(e.target.files[0], true)
+        .then(handleScannedCode)
+        .catch(() => statusEl.textContent = "❌ Could not read code from photo");
+});
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
