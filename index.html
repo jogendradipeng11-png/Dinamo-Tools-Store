@@ -478,7 +478,10 @@ function filterSyncTable(type) {
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
+
     if (html5QrCode) html5QrCode.pause(true);
+
+    // Check current scan mode
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
@@ -489,7 +492,8 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found: ${code}`;
         }
-    } else if (scanMode === 'editProduct') {
+    } 
+    else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) {
             editProduct(code);
@@ -499,15 +503,45 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found`;
         }
-    } else {
-        document.getElementById('pcode').value = code;
-        statusEl.style.color = "#2e7d32";
-        statusEl.textContent = `✅ Scanned Code: ${code}`;
-    }
-    scanMode = 'addProduct';
-    if (html5QrCode) setTimeout(() => html5QrCode.resume(), 1500);
-}
+    } 
+    else {
+        // === DEFAULT BEHAVIOR WHEN CAMERA IS OPENED NORMALLY ===
+        const product = products.find(p => p.code === code);
 
+        if (product) {
+            // Existing product → Load all details into "Add / Update Product" form
+            editProduct(code);
+            // After editProduct(code);  add this line:
+                document.getElementById('pqty').focus();
+                document.getElementById('pqty').select();
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Product Found: ${product.name} → Ready to update stock`;
+        } else {
+            // New product → Only fill the barcode/code field
+            document.getElementById('pname').value = '';
+            document.getElementById('pcode').value = code;
+            document.getElementById('pcat').value = '';
+            document.getElementById('pprice').value = '';
+            document.getElementById('pcost').value = '';
+            document.getElementById('pqty').value = '0';
+            document.getElementById('pminstock').value = '5';
+            document.getElementById('imagePreview').innerHTML = '';
+
+            editMode = null;   // Not editing existing product
+
+            statusEl.style.color = "#ff9800";
+            statusEl.textContent = `🆕 New Product - Code: ${code}. Fill details and click Save Product`;
+        }
+    }
+
+    // Reset scan mode back to default
+    scanMode = 'addProduct';
+
+    // Resume camera after short delay
+    if (html5QrCode) {
+        setTimeout(() => html5QrCode.resume(), 1800);
+    }
+}
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Requesting camera access...";
