@@ -85,11 +85,69 @@
     </style>
 </head>
 <body>
+    <!-- AUTH SCREEN -->
+<div id="authScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f4f6f9; font-family:Segoe UI;">
+    <div style="background:white; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:420px; margin:20px;">
+        
+        <div style="text-align:center; margin-bottom:25px;">
+            <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" 
+                 style="height:80px; margin-bottom:10px;">
+            <h2>Dinamo Tools POS</h2>
+            <p style="color:#666;">Sales & Service System</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm">
+            <h3>🔑 Login</h3>
+            <input id="loginEmail" type="email" placeholder="Email Address" style="margin-bottom:12px;">
+            <input id="loginPassword" type="password" placeholder="Password" style="margin-bottom:12px;">
+            
+            <button onclick="loginUser()" style="width:100%; padding:14px; margin:10px 0;">Login</button>
+            
+            <div style="text-align:center; margin:15px 0;">
+                <a href="#" onclick="forgotPassword(); return false;" style="color:#1976d2; font-size:14px;">Forgot Password?</a>
+            </div>
+            
+            <p style="text-align:center; margin:20px 0;">
+                Don't have an account? 
+                <a href="#" onclick="toggleAuthForms(); return false;" style="color:#1976d2;">Sign Up</a>
+            </p>
+        </div>
+
+        <!-- Sign Up Form (Hidden by default) -->
+        <div id="signupForm" style="display:none;">
+            <h3>📝 Create New Account</h3>
+            <input id="signupEmail" type="email" placeholder="Email Address" style="margin-bottom:12px;">
+            <input id="signupPassword" type="password" placeholder="Password (min 6 chars)" style="margin-bottom:12px;">
+            <input id="signupConfirmPassword" type="password" placeholder="Confirm Password" style="margin-bottom:20px;">
+            
+            <button onclick="signupUser()" style="width:100%; padding:14px; margin-bottom:12px; background:#2e7d32;">Create Account</button>
+            
+            <p style="text-align:center;">
+                Already have an account? 
+                <a href="#" onclick="toggleAuthForms(); return false;" style="color:#1976d2;">Login</a>
+            </p>
+        </div>
+
+        <div style="text-align:center; margin-top:20px; font-size:13px; color:#888;">
+            Secured by Firebase
+        </div>
+    </div>
+</div>
 <header>
     <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" class="logo-header">
     <h2 style="margin: 0; font-size: 22px;">Dinamo Tools Sales & Service</h2>
-    <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px; margin-top:8px;">⚙️ Configuration</button>
-    <button onclick="openGoogleSyncModal()" style="background:#4caf50; padding:8px 20px; font-size:15px; margin-top:8px; margin-left:8px;">🔄 Google Sheets Sync</button>
+    
+    <div style="margin-top: 10px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+        <button onclick="openConfigModal()" style="background:#1565c0; padding:8px 20px; font-size:15px;">⚙️ Configuration</button>
+        <button onclick="openGoogleSyncModal()" style="background:#4caf50; padding:8px 20px; font-size:15px;">🔄 Google Sheets Sync</button>
+        
+        <!-- NEW LOGOUT BUTTON -->
+        <button onclick="logoutUser()" 
+                style="background:#f44336; color:white; padding:8px 20px; font-size:15px; border:none; border-radius:8px; cursor:pointer;">
+            🚪 Logout
+        </button>
+    </div>
 </header>
 
 <div class="container">
@@ -256,6 +314,22 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
+const auth = firebase.auth();   // ← Important for login
+
+// ================== NEW: AUTHENTICATION HELPER FUNCTIONS ==================
+
+function toggleAuthForms() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+   
+    if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+    }
+}
     // ================== GOOGLE SHEETS SYNC URL ==================
 // ←←← REPLACE THIS WITH YOUR NEW DEPLOYED WEB APP URL ←←←
 const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwgW7Fr7koGHrKLrGe0qFqr6252SPSl5cSN2PUV6siVXdVmpinoHhiTFeUD-ZGQ6vYU/exec";
@@ -280,7 +354,89 @@ let storeConfig = {
     nequiLink: "https://clientes.nequi.com.co/recargas",
     pseLink: ""
 };
+// ================== AUTHENTICATION FUNCTIONS ==================
 
+// Show Login Screen
+function showLoginScreen() {
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+}
+
+// Show Main POS App (after login)
+function showMainApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    loadData();   // Load products etc.
+}
+
+// Login
+async function loginUser() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) return alert("Please enter email and password");
+
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        currentUser = userCredential.user;
+        alert(`✅ Welcome, ${currentUser.email}`);
+        showMainApp();
+    } catch (error) {
+        alert("Login Failed: " + error.message);
+    }
+}
+
+// Sign Up (Register New User)
+async function signupUser() {
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirmPass = document.getElementById('signupConfirmPassword').value;
+
+    if (password !== confirmPass) return alert("Passwords do not match!");
+    if (password.length < 6) return alert("Password must be at least 6 characters");
+
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        currentUser = userCredential.user;
+        alert("✅ Account created successfully! You are now logged in.");
+        showMainApp();
+    } catch (error) {
+        alert("Sign Up Failed: " + error.message);
+    }
+}
+
+// Forgot Password
+async function forgotPassword() {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return alert("Enter your email address first");
+
+    try {
+        await auth.sendPasswordResetEmail(email);
+        alert("✅ Password reset link sent to your email. Please check your inbox.");
+    } catch (error) {
+        alert("Error: " + error.message);
+    }
+}
+
+// Logout
+function logoutUser() {
+    if (confirm("Are you sure you want to logout?")) {
+        auth.signOut().then(() => {
+            currentUser = null;
+            showLoginScreen();
+        });
+    }
+}
+
+// Check Auth State (Auto login if already signed in)
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        showMainApp();
+    } else {
+        showLoginScreen();
+    }
+});
 // ================== CONFIG MODAL ==================
 function openConfigModal() {
     document.getElementById('configModal').style.display = 'flex';
