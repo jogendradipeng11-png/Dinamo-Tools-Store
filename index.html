@@ -507,17 +507,46 @@ async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Requesting camera access...";
     statusEl.style.color = "#1976d2";
-    if (html5QrCode) await html5QrCode.stop().catch(() => {});
+
+    if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+    }
+
     html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 15, qrbox: 250, aspectRatio: 1.777 };
+
+    const config = {
+        fps: 10,                    // Lower FPS often more stable on iOS
+        qrbox: { width: 280, height: 280 },   // Slightly larger scanning area
+        aspectRatio: 1.0,           // Square view — better for iPhone
+        disableFlip: false,
+        rememberLastUsedCamera: true,
+        // Try to force higher quality if possible
+        videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
+    };
+
     try {
-        await html5QrCode.start({ facingMode: "environment" }, config, handleScannedCode, () => {});
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            handleScannedCode,
+            (error) => {
+                // Optional: quiet error logging
+                console.log("Scan error (normal):", error);
+            }
+        );
+
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
+        statusEl.textContent = "✅ Scanner ready — Hold QR code steady inside the box";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
+        console.error(err);
         statusEl.style.color = "#d32f2f";
-        statusEl.textContent = "❌ Camera error. Please allow access and retry.";
+        statusEl.textContent = "❌ Camera error. Try 'Scan from Photo' instead.";
+        alert("Camera start failed. On iPhone, try the 'Scan from Photo' button — it usually works better.");
     }
 }
 
@@ -540,12 +569,23 @@ function startFileScan() {
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
-    statusEl.textContent = "Processing image...";
+    statusEl.textContent = "Processing photo...";
+    statusEl.style.color = "#1976d2";
+
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.scanFile(e.target.files[0], true)
-        .then(handleScannedCode)
-        .catch(() => statusEl.textContent = "❌ Could not read code from photo");
-});
+
+    html5QrCode.scanFile(e.target.files[0], true)  // true = verbose
+        .then(decodedText => {
+            handleScannedCode(decodedText);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Scanned: ${decodedText}`;
+        })
+        .catch(err => {
+            console.error(err);
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = "❌ Could not read QR from this photo. Try another angle/lighting.";
+        });
+});;
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
