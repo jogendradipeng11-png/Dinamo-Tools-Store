@@ -99,6 +99,11 @@
         <h3>📱 Live Barcode & QR Scanner</h3>
         <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
         <p id="scannerStatus" style="text-align:center; font-weight:500; min-height:26px; color:#1976d2;">Click 'Start Camera' to begin</p>
+     <!-- ADD THE NEW MESSAGE HERE -->
+        <p style="text-align:center; font-size:14px; color:#d32f2f; margin:10px 0;">
+            <strong>On iPhone:</strong> Live scanner can be slow/unreliable.<br>
+            Use <strong>"Scan from Photo"</strong> button for best results.
+        </p>
         <p class="scanner-note">⚠️ Important: Must be opened with HTTPS. Best on mobile.</p>
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
             <button onclick="startFileScan()" style="padding:10px 20px;">📸 Scan from Photo</button>
@@ -473,7 +478,10 @@ function filterSyncTable(type) {
 function handleScannedCode(decodedText) {
     const code = decodedText.trim();
     const statusEl = document.getElementById('scannerStatus');
+
     if (html5QrCode) html5QrCode.pause(true);
+
+    // Check current scan mode
     if (scanMode === 'addToBill') {
         const product = products.find(p => p.code === code);
         if (product) {
@@ -484,7 +492,8 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found: ${code}`;
         }
-    } else if (scanMode === 'editProduct') {
+    } 
+    else if (scanMode === 'editProduct') {
         const product = products.find(p => p.code === code);
         if (product) {
             editProduct(code);
@@ -494,30 +503,89 @@ function handleScannedCode(decodedText) {
             statusEl.style.color = "#d32f2f";
             statusEl.textContent = `❌ Product not found`;
         }
-    } else {
-        document.getElementById('pcode').value = code;
-        statusEl.style.color = "#2e7d32";
-        statusEl.textContent = `✅ Scanned Code: ${code}`;
-    }
-    scanMode = 'addProduct';
-    if (html5QrCode) setTimeout(() => html5QrCode.resume(), 1500);
-}
+    } 
+    else {
+        // === DEFAULT BEHAVIOR WHEN CAMERA IS OPENED NORMALLY ===
+        const product = products.find(p => p.code === code);
 
+        if (product) {
+            // Existing product → Load all details into "Add / Update Product" form
+            editProduct(code);
+            // After editProduct(code);  add this line:
+                document.getElementById('pqty').focus();
+                document.getElementById('pqty').select();
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Product Found: ${product.name} → Ready to update stock`;
+        } else {
+            // New product → Only fill the barcode/code field
+            document.getElementById('pname').value = '';
+            document.getElementById('pcode').value = code;
+            document.getElementById('pcat').value = '';
+            document.getElementById('pprice').value = '';
+            document.getElementById('pcost').value = '';
+            document.getElementById('pqty').value = '0';
+            document.getElementById('pminstock').value = '5';
+            document.getElementById('imagePreview').innerHTML = '';
+
+            editMode = null;   // Not editing existing product
+
+            statusEl.style.color = "#ff9800";
+            statusEl.textContent = `🆕 New Product - Code: ${code}. Fill details and click Save Product`;
+        }
+    }
+
+    // Reset scan mode back to default
+    scanMode = 'addProduct';
+
+    // Resume camera after short delay
+    if (html5QrCode) {
+        setTimeout(() => html5QrCode.resume(), 1800);
+    }
+}
 async function initScanner() {
     const statusEl = document.getElementById('scannerStatus');
     statusEl.textContent = "Requesting camera access...";
     statusEl.style.color = "#1976d2";
-    if (html5QrCode) await html5QrCode.stop().catch(() => {});
+
+    if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+    }
+
     html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 15, qrbox: 250, aspectRatio: 1.777 };
+
+    const config = {
+        fps: 10,                    // Lower FPS often more stable on iOS
+        qrbox: { width: 280, height: 280 },   // Slightly larger scanning area
+        aspectRatio: 1.0,           // Square view — better for iPhone
+        disableFlip: false,
+        rememberLastUsedCamera: true,
+        // Try to force higher quality if possible
+        videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
+    };
+
     try {
-        await html5QrCode.start({ facingMode: "environment" }, config, handleScannedCode, () => {});
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            handleScannedCode,
+            (error) => {
+                // Optional: quiet error logging
+                console.log("Scan error (normal):", error);
+            }
+        );
+
         statusEl.style.color = "#2e7d32";
-        statusEl.textContent = "✅ Scanner ready — Point barcode at camera";
+        statusEl.textContent = "✅ Scanner ready — Hold QR code steady inside the box";
         document.getElementById('flashBtn').style.display = 'inline-block';
     } catch (err) {
+        console.error(err);
         statusEl.style.color = "#d32f2f";
-        statusEl.textContent = "❌ Camera error. Please allow access and retry.";
+        statusEl.textContent = "❌ Camera error. Try 'Scan from Photo' instead.";
+        alert("Camera start failed. On iPhone, try the 'Scan from Photo' button — it usually works better.");
     }
 }
 
@@ -540,12 +608,23 @@ function startFileScan() {
 document.getElementById('fileInput').addEventListener('change', function(e) {
     if (!e.target.files[0]) return;
     const statusEl = document.getElementById('scannerStatus');
-    statusEl.textContent = "Processing image...";
+    statusEl.textContent = "Processing photo...";
+    statusEl.style.color = "#1976d2";
+
     if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.scanFile(e.target.files[0], true)
-        .then(handleScannedCode)
-        .catch(() => statusEl.textContent = "❌ Could not read code from photo");
-});
+
+    html5QrCode.scanFile(e.target.files[0], true)  // true = verbose
+        .then(decodedText => {
+            handleScannedCode(decodedText);
+            statusEl.style.color = "#2e7d32";
+            statusEl.textContent = `✅ Scanned: ${decodedText}`;
+        })
+        .catch(err => {
+            console.error(err);
+            statusEl.style.color = "#d32f2f";
+            statusEl.textContent = "❌ Could not read QR from this photo. Try another angle/lighting.";
+        });
+});;
 
 function scanForAddToBill() {
     scanMode = 'addToBill';
