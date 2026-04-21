@@ -913,8 +913,110 @@ function PrintInvoice() {
 }
 
 function printThermalBill() {
-    alert("Thermal print function is ready.");
-    // You can expand this later with actual 80mm receipt logic
+    if (!document.getElementById('bill').innerHTML.trim()) {
+        return alert("❌ Please generate the invoice first!");
+    }
+    if (lastInvoiceCart.length === 0) {
+        return alert("No invoice data found. Please generate the bill again.");
+    }
+
+    const invoiceIdMatch = document.getElementById('bill').innerHTML.match(/Factura:\s*([A-Z0-9-]+)/);
+    const invoiceId = invoiceIdMatch ? invoiceIdMatch[1] : "INV-XXXXXX";
+
+    const customerName = document.getElementById('customerName').value.trim() || "Cliente General";
+    const currentDate = new Date().toLocaleDateString('es-CO');
+    const currentTime = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+    const subtotal = lastInvoiceCart.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0);
+    const ivaRate = storeConfig.ivaRate || 19;
+    const iva = subtotal * (ivaRate / 100);
+    const finalTotal = Math.round(adjustedTotal || (subtotal + iva));
+
+    let receipt = `================================\n`;
+    receipt += `     DINAMO TOOLS\n`;
+    receipt += `   SALES & SERVICE\n`;
+    receipt += `================================\n\n`;
+
+    receipt += `Factura No : ${invoiceId}\n`;
+    receipt += `Fecha      : ${currentDate} ${currentTime}\n`;
+    receipt += `Cliente    : ${customerName}\n\n`;
+
+    receipt += `PRODUCTO               CANT   TOTAL\n`;
+    receipt += `------------------------------------\n`;
+
+    lastInvoiceCart.forEach(item => {
+        const shortName = item.name.length > 22 
+            ? item.name.substring(0, 22) + ".." 
+            : item.name;
+        const lineTotal = (item.qty * (item.price || 0)).toLocaleString('es-CO');
+        
+        receipt += `${shortName.padEnd(22)} ${item.qty.toString().padStart(4)} $${lineTotal.padStart(8)}\n`;
+    });
+
+    receipt += `------------------------------------\n`;
+    receipt += `Subtotal          $${subtotal.toLocaleString('es-CO').padStart(10)}\n`;
+    receipt += `IVA (${ivaRate}%)      $${iva.toLocaleString('es-CO').padStart(10)}\n`;
+    receipt += `================================\n`;
+    receipt += `TOTAL A PAGAR     $${finalTotal.toLocaleString('es-CO').padStart(10)}\n`;
+    receipt += `================================\n\n`;
+
+    receipt += `     ¡GRACIAS POR SU COMPRA!\n`;
+    receipt += `        Vuelva pronto 🛠️\n\n`;
+
+    receipt += `💰 Paga fácilmente con:\n`;
+    receipt += `Nequi → ${storeConfig.nequiLink}\n`;
+    if (storeConfig.pseLink) receipt += `PSE   → ${storeConfig.pseLink}\n`;
+
+    // === THERMAL PRINT WINDOW ===
+    const thermalWindow = window.open('', '_blank');
+    
+    thermalWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Thermal Receipt - Dinamo Tools</title>
+            <style>
+                @page { size: 80mm auto; margin: 0; }
+                body {
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    width: 72mm;
+                    margin: 0 auto;
+                    padding: 8mm 4mm;
+                    line-height: 1.35;
+                    white-space: pre-wrap;
+                }
+                .center { text-align: center; font-weight: bold; }
+                .qr { text-align: center; margin: 10px 0; }
+            </style>
+        </head>
+        <body onload="window.print(); setTimeout(() => window.close(), 1000);">
+            <div class="center">DINAMO TOOLS SALES & SERVICE</div>
+            ${receipt.replace(/\n/g, '<br>')}
+
+            <!-- QR Code Section -->
+            <div class="qr">
+                <strong>Escanea para pagar con Nequi</strong><br><br>
+                <div id="nequiQR"></div>
+            </div>
+
+            <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+            <script>
+                // Generate QR code for Nequi
+                new QRCode(document.getElementById("nequiQR"), {
+                    text: "${storeConfig.nequiLink}?amount=${finalTotal}",
+                    width: 180,
+                    height: 180,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff"
+                });
+            <\/script>
+        </body>
+        </html>
+    `);
+
+    thermalWindow.document.close();
 }
 
 function sendWhatsApp() {
