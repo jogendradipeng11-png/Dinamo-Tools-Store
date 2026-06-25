@@ -850,7 +850,7 @@ async function saveProduct() {
         // 1. Save directly into Firebase Realtime Database
         await db.ref('products/' + code).set(product);
         
-        // 2. Transmit payload dynamically down to Google Sheets App Script Hook
+        // 2. Transmit payload dynamically down to Google Sheets Apps Script Hook
         await fetch(YOUR_GOOGLE_SHEET_URL, {
             method: 'POST',
             body: JSON.stringify({ action: 'updateProduct', key: code, data: product })
