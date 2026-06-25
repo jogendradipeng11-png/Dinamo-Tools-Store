@@ -440,7 +440,6 @@ async function handleSyncImageUpload(inputElement, productCode) {
     if (previewImg) {
         previewImg.src = URL.createObjectURL(file);
     } else if (fallbackDiv) {
-        // Switch view block placeholder to img layout structure
         const newImg = document.createElement('img');
         newImg.className = "sync-preview-img";
         newImg.style.cssText = "width:50px;height:50px;object-fit:cover;border-radius:6px;";
@@ -556,7 +555,7 @@ async function updateRow(btn, key, type) {
         data = { id: cells[0].innerText, customer: cells[2].innerText, total: cells[3].innerText.replace(/[^0-9.]/g,'') };
     }
     try {
-        const response = await fetch(YOUR_GOOGLE_SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'update' + (type==='products'?'Product':'Invoice'), key, data }) });
+        await fetch(YOUR_GOOGLE_SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'update' + (type==='products'?'Product':'Invoice'), key, data }) });
         alert("✅ Updated successfully!");
         row.querySelectorAll('td').forEach(td => td.contentEditable = false);
         const uploadBtn = row.querySelector('.sync-upload-btn');
@@ -848,8 +847,16 @@ async function saveProduct() {
     }
 
     try {
+        // 1. Save directly into Firebase Realtime Database
         await db.ref('products/' + code).set(product);
-        alert("✅ Product saved successfully!");
+        
+        // 2. Transmit payload dynamically down to Google Sheets App Script Hook
+        await fetch(YOUR_GOOGLE_SHEET_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'updateProduct', key: code, data: product })
+        });
+
+        alert("✅ Product saved successfully on Firebase & Google Sheet!");
         editMode = null;
         document.getElementById('generatedBarcodeQR').style.display = 'none';
         const snap = await db.ref('products').once('value');
