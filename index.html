@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dinamo Tools Sales & Service - POS</title>
 
+    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -54,6 +55,7 @@
 </head>
 <body>
 
+    <!-- AUTH SCREEN -->
     <div id="authScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f4f6f9;">
         <div style="background:white; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:420px; margin:20px;">
             <div style="text-align:center; margin-bottom:25px;">
@@ -89,6 +91,7 @@
         </div>
     </div>
 
+    <!-- MAIN APP -->
     <div id="mainApp" style="display:none;">
         <header>
             <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" class="logo-header">
@@ -101,6 +104,7 @@
         </header>
 
         <div class="container">
+            <!-- SCANNER -->
             <div class="card">
                 <h3>📱 Live Barcode & QR Scanner</h3>
                 <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
@@ -116,11 +120,13 @@
                 <input type="file" id="fileInput" accept="image/*" style="display:none;">
             </div>
 
+            <!-- ADD / UPDATE PRODUCT -->
             <div class="card">
                 <h3>📦 Add / Update Product</h3>
                 <input id="pname" placeholder="Product Name">
                 <input id="pcode" placeholder="Barcode / Code *">
                 
+                <!-- SYSTEM BARCODE GENERATOR AREA -->
                 <div style="background: #f8f9fa; border: 1px dashed #1976d2; padding: 12px; border-radius: 8px; margin: 8px 0;">
                     <label style="font-weight: 600; font-size: 14px; color: #1976d2; display: block; margin-bottom: 6px;">🏷️ System Barcode Generator (For Items Without Barcodes)</label>
                     <div style="display: flex; gap: 10px;">
@@ -149,11 +155,13 @@
                 <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
             </div>
 
+            <!-- INVENTORY OVERVIEW -->
             <div class="card">
                 <h3>📊 Inventory Overview</h3>
                 <div id="inventorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
             </div>
 
+            <!-- MANAGE PRODUCTS -->
             <div class="card">
                 <h3>🗂️ Manage Products & Stock</h3>
                 <button onclick="scanForEdit()" style="margin-bottom:12px; width:100%; padding:14px; background:#ff9800; font-size:17px;">📱 SCAN TO EDIT PRODUCT</button>
@@ -161,6 +169,7 @@
                 <div id="productList" style="max-height:420px; overflow-y:auto;"></div>
             </div>
 
+            <!-- BILLING -->
             <div class="card">
                 <h3>🛒 Billing</h3>
                 <input id="search" placeholder="Search product or scan barcode" onkeyup="searchProduct()">
@@ -178,6 +187,7 @@
                 <button onclick="restoreStock()" class="danger-btn" style="margin-top:8px; width:100%;">❌ Cancel Invoice & Restore Stock</button>
             </div>
 
+            <!-- INVOICE -->
             <div class="card">
                 <h3>📄 Sales Invoice</h3>
                 <div id="bill"></div>
@@ -192,6 +202,7 @@
         </div>
     </div>
 
+    <!-- CONFIG MODAL -->
     <div id="configModal" class="modal">
         <div class="modal-content" style="max-width:420px;">
             <h3>⚙️ Store & Tax Configuration <span onclick="closeConfigModal()" style="float:right;cursor:pointer;font-size:28px;">×</span></h3>
@@ -212,6 +223,7 @@
         </div>
     </div>
 
+    <!-- GOOGLE SHEETS SYNC MODAL -->
     <div id="googleSyncModal" class="modal">
         <div class="modal-content" style="width:95%; max-width:1100px; max-height:90vh; overflow:auto;">
             <h3>🔄 Google Sheets Management <span onclick="closeGoogleSyncModal()" style="float:right;cursor:pointer;font-size:28px;">×</span></h3>
@@ -222,7 +234,7 @@
             <div id="productsTab">
                 <input id="productSearchSync" placeholder="Search products..." onkeyup="filterSyncTable('products')" style="margin:12px 0;width:100%;">
                 <table class="table" id="productsSyncTable">
-                    <thead><tr><th>Name</th><th>Code</th><th>Category</th><th>Price</th><th>Cost</th><th>Stock</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Image</th><th>Name</th><th>Code</th><th>Category</th><th>Price</th><th>Cost</th><th>Stock</th><th>Actions</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -281,7 +293,7 @@ let storeConfig = {
     pseLink: ""
 };
 
-// ================== NEW BARCODE GENERATOR MODULE ==================
+// ================== BARCODE GENERATOR MODULE ==================
 function generateSystemCode() {
     const timestamp = Date.now().toString().slice(-6);
     const randomBits = Math.floor(1000 + Math.random() * 9000).toString();
@@ -430,16 +442,46 @@ function showTab(tab) {
     document.getElementById('tabInvoices').style.background = tab === 'invoices' ? '#1565c0' : '#1976d2';
 }
 
+async function handleSyncImageUpload(inputElement, productCode) {
+    const file = inputElement.files[0];
+    if (!file) return;
+    
+    const previewImg = inputElement.parentElement.querySelector('.sync-preview-img');
+    if (previewImg) {
+        previewImg.src = URL.createObjectURL(file);
+    }
+
+    try {
+        const storageRef = storage.ref(`product_images/${productCode}_${Date.now()}`);
+        await storageRef.put(file);
+        const imageUrl = await storageRef.getDownloadURL();
+        
+        // Save link inside hidden cell descriptor or data attribute
+        inputElement.setAttribute('data-uploaded-url', imageUrl);
+        alert("📸 Photo uploaded locally! Click 'Update' row to push to Google Sheets.");
+    } catch (err) {
+        alert("⚠️ Photo upload failed.");
+    }
+}
+
 async function loadSyncProducts() {
     const tbody = document.querySelector('#productsSyncTable tbody');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">Loading products...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;">Loading products...</td></tr>';
     try {
         const res = await fetch(YOUR_GOOGLE_SHEET_URL + '?action=getProducts');
         const data = await res.json();
         tbody.innerHTML = '';
         data.forEach(row => {
             const tr = document.createElement('tr');
+            const pImg = row.imageUrl || '';
             tr.innerHTML = `
+                <td>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                        ${pImg ? `<img src="${pImg}" class="sync-preview-img" style="width:50px;height:50px;object-fit:cover;border-radius:6px;">` : `<div class="sync-preview-img" style="width:50px;height:50px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;">No Img</div>`}
+                        <input type="file" accept="image/*" class="sync-image-file" style="display:none; font-size:11px; width:130px;" onchange="handleSyncImageUpload(this, '${row.code}')">
+                        <button class="sync-upload-btn" onclick="this.previousElementSibling.click()" style="display:none; padding:4px 8px; font-size:11px; width:auto; background:#7f8c8d; margin:2px 0;">Change</button>
+                    </div>
+                </td>
                 <td contenteditable="false">${row.name || ''}</td>
                 <td contenteditable="false">${row.code || ''}</td>
                 <td contenteditable="false">${row.cat || ''}</td>
@@ -451,10 +493,14 @@ async function loadSyncProducts() {
                     <button onclick="updateRow(this, '${row.code}', 'products')" class="success-btn" style="display:none;">Update</button>
                     <button onclick="deleteSyncRow('${row.code}', 'products')" class="delete-btn">Delete</button>
                 </td>`;
+            
+            // Set fallback data attribute inside hidden properties
+            const fileInput = tr.querySelector('.sync-image-file');
+            if(fileInput) fileInput.setAttribute('data-uploaded-url', pImg);
             tbody.appendChild(tr);
         });
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="7" style="color:red;text-align:center;">Error loading products. Check Google Web App URL.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="color:red;text-align:center;">Error loading products. Check Google Web App URL.</td></tr>';
     }
 }
 
@@ -486,7 +532,11 @@ async function loadSyncInvoices() {
 
 function editRow(btn) {
     const row = btn.parentElement.parentElement;
-    row.querySelectorAll('td').forEach(td => td.contentEditable = true);
+    row.querySelectorAll('td').forEach((td, index) => {
+        if(index > 0) td.contentEditable = true; // Skip image layout column 
+    });
+    const uploadBtn = row.querySelector('.sync-upload-btn');
+    if(uploadBtn) uploadBtn.style.display = 'inline-block';
     btn.style.display = 'none';
     btn.nextElementSibling.style.display = 'inline-block';
 }
@@ -496,7 +546,17 @@ async function updateRow(btn, key, type) {
     const cells = row.querySelectorAll('td');
     let data = {};
     if (type === 'products') {
-        data = { name: cells[0].innerText, code: cells[1].innerText, cat: cells[2].innerText, price: cells[3].innerText, cost: cells[4].innerText, qty: cells[5].innerText };
+        const fileInput = row.querySelector('.sync-image-file');
+        const imageUrl = fileInput ? (fileInput.getAttribute('data-uploaded-url') || '') : '';
+        data = { 
+            imageUrl: imageUrl,
+            name: cells[1].innerText, 
+            code: cells[2].innerText, 
+            cat: cells[3].innerText, 
+            price: cells[4].innerText, 
+            cost: cells[5].innerText, 
+            qty: cells[6].innerText 
+        };
     } else {
         data = { id: cells[0].innerText, customer: cells[2].innerText, total: cells[3].innerText.replace(/[^0-9.]/g,'') };
     }
@@ -504,6 +564,8 @@ async function updateRow(btn, key, type) {
         await fetch(YOUR_GOOGLE_SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'update' + (type==='products'?'Product':'Invoice'), key, data }) });
         alert("✅ Updated successfully!");
         row.querySelectorAll('td').forEach(td => td.contentEditable = false);
+        const uploadBtn = row.querySelector('.sync-upload-btn');
+        if(uploadBtn) uploadBtn.style.display = 'none';
         btn.style.display = 'none';
         btn.previousElementSibling.style.display = 'inline-block';
         if (type === 'products') loadSyncProducts(); else loadSyncInvoices();
