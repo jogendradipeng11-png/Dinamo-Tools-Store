@@ -10,7 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
@@ -144,7 +143,7 @@
                     <button onclick="uploadFromFile()" style="flex:1; background:#4caf50;">📤 Upload from Gallery</button>
                     <button onclick="captureProductPhoto()" style="flex:1;">📸 Take Photo</button>
                 </div>
-                <input type="file" id="pimage" accept="image/*" style="display:none;">
+                <input type="file" id="pimage" accept="image/*" style="display:none;" onchange="previewLocalImage(this)">
                 <div id="imagePreview" style="margin:10px 0;text-align:center;"></div>
                 <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
             </div>
@@ -245,15 +244,11 @@ const firebaseConfig = {
   apiKey: "AIzaSyBB6wLNp_kkUyhIRCnWhlQGTegSk0Wv3uE",
   authDomain: "dinamo-store-app.firebaseapp.com",
   databaseURL: "https://dinamo-store-app-default-rtdb.firebaseio.com",
-  projectId: "dinamo-store-app",
-  storageBucket: "dinamo-store-app.firebasestorage.app",
-  messagingSenderId: "266478900382",
-  appId: "1:266478900382:web:321b8f26235e8395e2578f"
+  projectId: "dinamo-store-app"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const storage = firebase.storage();
 const auth = firebase.auth();
 
 let currentUser = null;
@@ -265,6 +260,7 @@ let isFlashOn = false;
 let scanMode = 'addProduct';
 let editMode = null;
 let adjustedTotal = 0;
+let base64ImageString = "";
 
 const YOUR_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwgW7Fr7koGHrKLrGe0qFqr6252SPSl5cSN2PUV6siVXdVmpinoHhiTFeUD-ZGQ6vYU/exec";
 
@@ -397,6 +393,44 @@ function showMainApp() {
     loadData();
 }
 
+// ================== NO-COST BASE64 IMAGE PROCESSOR ==================
+function previewLocalImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        base64ImageString = e.target.result;
+        document.getElementById('imagePreview').innerHTML = `<img src="${base64ImageString}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">`;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function handleSyncImageUpload(inputElement, productCode) {
+    const file = inputElement.files[0];
+    if (!file) return;
+    
+    const previewImg = inputElement.parentElement.querySelector('.sync-preview-img');
+    const fallbackDiv = inputElement.parentElement.querySelector('.sync-fallback-div');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Str = e.target.result;
+        inputElement.setAttribute('data-uploaded-url', base64Str);
+        
+        if (previewImg) {
+            previewImg.src = base64Str;
+        } else if (fallbackDiv) {
+            const newImg = document.createElement('img');
+            newImg.className = "sync-preview-img";
+            newImg.style.cssText = "width:50px;height:50px;object-fit:cover;border-radius:6px;";
+            newImg.src = base64Str;
+            fallbackDiv.replaceWith(newImg);
+        }
+        alert("📸 Photo captured locally! Click 'Update' row to save to Google Sheet.");
+    };
+    reader.readAsDataURL(file);
+}
+
 // ================== CONFIG & GOOGLE SYNC ==================
 function openConfigModal() { document.getElementById('configModal').style.display = 'flex'; }
 function closeConfigModal() { document.getElementById('configModal').style.display = 'none'; }
@@ -428,35 +462,6 @@ function showTab(tab) {
     document.getElementById('invoicesTab').style.display = tab === 'invoices' ? 'block' : 'none';
     document.getElementById('tabProducts').style.background = tab === 'products' ? '#2e7d32' : '#4caf50';
     document.getElementById('tabInvoices').style.background = tab === 'invoices' ? '#1565c0' : '#1976d2';
-}
-
-async function handleSyncImageUpload(inputElement, productCode) {
-    const file = inputElement.files[0];
-    if (!file) return;
-    
-    const previewImg = inputElement.parentElement.querySelector('.sync-preview-img');
-    const fallbackDiv = inputElement.parentElement.querySelector('.sync-fallback-div');
-    
-    if (previewImg) {
-        previewImg.src = URL.createObjectURL(file);
-    } else if (fallbackDiv) {
-        const newImg = document.createElement('img');
-        newImg.className = "sync-preview-img";
-        newImg.style.cssText = "width:50px;height:50px;object-fit:cover;border-radius:6px;";
-        newImg.src = URL.createObjectURL(file);
-        fallbackDiv.replaceWith(newImg);
-    }
-
-    try {
-        const storageRef = storage.ref(`product_images/${productCode}_${Date.now()}`);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        
-        inputElement.setAttribute('data-uploaded-url', imageUrl);
-        alert("📸 Photo uploaded locally! Click 'Update' row to push to Google Sheets.");
-    } catch (err) {
-        alert("⚠️ Photo upload failed.");
-    }
 }
 
 async function loadSyncProducts() {
@@ -625,6 +630,7 @@ function handleScannedCode(decodedText) {
             document.getElementById('pqty').value = '0';
             document.getElementById('pminstock').value = '5';
             document.getElementById('imagePreview').innerHTML = '';
+            base64ImageString = "";
             editMode = null;
             statusEl.style.color = "#ff9800";
             statusEl.textContent = `🆕 New Product - Code: ${code}. Fill details and Save.`;
@@ -664,6 +670,7 @@ async function toggleFlashlight() {
     }
 }
 
+// Global invocation triggers
 function startFileScan() { document.getElementById('fileInput').click(); }
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -751,7 +758,7 @@ function renderProductList(filtered = products) {
             <div style="display:flex; align-items:center; gap:12px;">
                 ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : `<div style="width:60px;height:60px;background:#eee;border-radius:8px;">No Img</div>`}
                 <div>
-                    <strong>${p.name}</strong><br>
+                    export <strong>${p.name}</strong><br>
                     <small>Code: ${p.code} | Stock: ${p.qty || 0}</small>
                 </div>
             </div>
@@ -811,8 +818,10 @@ function editProduct(code) {
     document.getElementById('pcost').value = p.cost || '';
     document.getElementById('pqty').value = p.qty || '';
     document.getElementById('pminstock').value = p.minStock || 5;
+    
+    base64ImageString = p.imageUrl || "";
     const preview = document.getElementById('imagePreview');
-    preview.innerHTML = p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` : '';
+    preview.innerHTML = base64ImageString ? `<img src="${base64ImageString}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` : '';
     editMode = code;
 
     const qrDiv = document.getElementById('prodLabelQR');
@@ -831,20 +840,7 @@ async function saveProduct() {
     const minStock = parseInt(document.getElementById('pminstock').value) || 5;
     const cat = document.getElementById('pcat').value.trim();
 
-    let product = { name, code, cat, price, cost, qty, minStock, imageUrl: '' };
-    const existing = products.find(p => p.code === code);
-    if (existing && existing.imageUrl) product.imageUrl = existing.imageUrl;
-
-    const file = document.getElementById('pimage').files[0];
-    if (file) {
-        try {
-            const storageRef = storage.ref(`product_images/${code}_${Date.now()}`);
-            await storageRef.put(file);
-            product.imageUrl = await storageRef.getDownloadURL();
-        } catch (err) {
-            alert("⚠️ Image upload failed.");
-        }
-    }
+    let product = { name, code, cat, price, cost, qty, minStock, imageUrl: base64ImageString };
 
     try {
         // 1. Save directly into Firebase Realtime Database
@@ -858,7 +854,10 @@ async function saveProduct() {
 
         alert("✅ Product saved successfully on Firebase & Google Sheet!");
         editMode = null;
+        base64ImageString = "";
+        document.getElementById('imagePreview').innerHTML = "";
         document.getElementById('generatedBarcodeQR').style.display = 'none';
+        document.getElementById('pimage').value = "";
         const snap = await db.ref('products').once('value');
         products = snap.val() ? Object.values(snap.val()) : [];
         renderProductList();
