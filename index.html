@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dinamo Tools Sales & Service - POS</title>
 
-    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -55,7 +54,6 @@
 </head>
 <body>
 
-    <!-- AUTH SCREEN -->
     <div id="authScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f4f6f9;">
         <div style="background:white; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:420px; margin:20px;">
             <div style="text-align:center; margin-bottom:25px;">
@@ -91,7 +89,6 @@
         </div>
     </div>
 
-    <!-- MAIN APP -->
     <div id="mainApp" style="display:none;">
         <header>
             <img src="https://raw.githubusercontent.com/jogendradipeng11-png/Dinamo-Tools-Store/main/logo.png" alt="Dinamo Tools Logo" class="logo-header">
@@ -104,7 +101,6 @@
         </header>
 
         <div class="container">
-            <!-- SCANNER -->
             <div class="card">
                 <h3>📱 Live Barcode & QR Scanner</h3>
                 <div id="reader" style="width:100%; max-width:400px; margin:10px auto; border:3px solid var(--primary); border-radius:12px; background:#000;"></div>
@@ -120,13 +116,11 @@
                 <input type="file" id="fileInput" accept="image/*" style="display:none;">
             </div>
 
-            <!-- ADD / UPDATE PRODUCT -->
             <div class="card">
                 <h3>📦 Add / Update Product</h3>
                 <input id="pname" placeholder="Product Name">
                 <input id="pcode" placeholder="Barcode / Code *">
                 
-                <!-- SYSTEM BARCODE GENERATOR AREA -->
                 <div style="background: #f8f9fa; border: 1px dashed #1976d2; padding: 12px; border-radius: 8px; margin: 8px 0;">
                     <label style="font-weight: 600; font-size: 14px; color: #1976d2; display: block; margin-bottom: 6px;">🏷️ System Barcode Generator (For Items Without Barcodes)</label>
                     <div style="display: flex; gap: 10px;">
@@ -155,13 +149,11 @@
                 <button onclick="saveProduct()" style="margin-top:10px;">💾 Save Product</button>
             </div>
 
-            <!-- INVENTORY OVERVIEW -->
             <div class="card">
                 <h3>📊 Inventory Overview</h3>
                 <div id="inventorySummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
             </div>
 
-            <!-- MANAGE PRODUCTS -->
             <div class="card">
                 <h3>🗂️ Manage Products & Stock</h3>
                 <button onclick="scanForEdit()" style="margin-bottom:12px; width:100%; padding:14px; background:#ff9800; font-size:17px;">📱 SCAN TO EDIT PRODUCT</button>
@@ -169,7 +161,6 @@
                 <div id="productList" style="max-height:420px; overflow-y:auto;"></div>
             </div>
 
-            <!-- BILLING -->
             <div class="card">
                 <h3>🛒 Billing</h3>
                 <input id="search" placeholder="Search product or scan barcode" onkeyup="searchProduct()">
@@ -187,7 +178,6 @@
                 <button onclick="restoreStock()" class="danger-btn" style="margin-top:8px; width:100%;">❌ Cancel Invoice & Restore Stock</button>
             </div>
 
-            <!-- INVOICE -->
             <div class="card">
                 <h3>📄 Sales Invoice</h3>
                 <div id="bill"></div>
@@ -202,7 +192,6 @@
         </div>
     </div>
 
-    <!-- CONFIG MODAL -->
     <div id="configModal" class="modal">
         <div class="modal-content" style="max-width:420px;">
             <h3>⚙️ Store & Tax Configuration <span onclick="closeConfigModal()" style="float:right;cursor:pointer;font-size:28px;">×</span></h3>
@@ -223,7 +212,6 @@
         </div>
     </div>
 
-    <!-- GOOGLE SHEETS SYNC MODAL -->
     <div id="googleSyncModal" class="modal">
         <div class="modal-content" style="width:95%; max-width:1100px; max-height:90vh; overflow:auto;">
             <h3>🔄 Google Sheets Management <span onclick="closeGoogleSyncModal()" style="float:right;cursor:pointer;font-size:28px;">×</span></h3>
@@ -447,8 +435,17 @@ async function handleSyncImageUpload(inputElement, productCode) {
     if (!file) return;
     
     const previewImg = inputElement.parentElement.querySelector('.sync-preview-img');
+    const fallbackDiv = inputElement.parentElement.querySelector('.sync-fallback-div');
+    
     if (previewImg) {
         previewImg.src = URL.createObjectURL(file);
+    } else if (fallbackDiv) {
+        // Switch view block placeholder to img layout structure
+        const newImg = document.createElement('img');
+        newImg.className = "sync-preview-img";
+        newImg.style.cssText = "width:50px;height:50px;object-fit:cover;border-radius:6px;";
+        newImg.src = URL.createObjectURL(file);
+        fallbackDiv.replaceWith(newImg);
     }
 
     try {
@@ -456,7 +453,6 @@ async function handleSyncImageUpload(inputElement, productCode) {
         await storageRef.put(file);
         const imageUrl = await storageRef.getDownloadURL();
         
-        // Save link inside hidden cell descriptor or data attribute
         inputElement.setAttribute('data-uploaded-url', imageUrl);
         alert("📸 Photo uploaded locally! Click 'Update' row to push to Google Sheets.");
     } catch (err) {
@@ -477,8 +473,8 @@ async function loadSyncProducts() {
             tr.innerHTML = `
                 <td>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                        ${pImg ? `<img src="${pImg}" class="sync-preview-img" style="width:50px;height:50px;object-fit:cover;border-radius:6px;">` : `<div class="sync-preview-img" style="width:50px;height:50px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;">No Img</div>`}
-                        <input type="file" accept="image/*" class="sync-image-file" style="display:none; font-size:11px; width:130px;" onchange="handleSyncImageUpload(this, '${row.code}')">
+                        ${pImg ? `<img src="${pImg}" class="sync-preview-img" style="width:50px;height:50px;object-fit:cover;border-radius:6px;">` : `<div class="sync-fallback-div" style="width:50px;height:50px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;">No Img</div>`}
+                        <input type="file" accept="image/*" class="sync-image-file" style="display:none;" onchange="handleSyncImageUpload(this, '${row.code}')">
                         <button class="sync-upload-btn" onclick="this.previousElementSibling.click()" style="display:none; padding:4px 8px; font-size:11px; width:auto; background:#7f8c8d; margin:2px 0;">Change</button>
                     </div>
                 </td>
@@ -494,7 +490,6 @@ async function loadSyncProducts() {
                     <button onclick="deleteSyncRow('${row.code}', 'products')" class="delete-btn">Delete</button>
                 </td>`;
             
-            // Set fallback data attribute inside hidden properties
             const fileInput = tr.querySelector('.sync-image-file');
             if(fileInput) fileInput.setAttribute('data-uploaded-url', pImg);
             tbody.appendChild(tr);
@@ -533,7 +528,7 @@ async function loadSyncInvoices() {
 function editRow(btn) {
     const row = btn.parentElement.parentElement;
     row.querySelectorAll('td').forEach((td, index) => {
-        if(index > 0) td.contentEditable = true; // Skip image layout column 
+        if(index > 0 && index < 7) td.contentEditable = true; 
     });
     const uploadBtn = row.querySelector('.sync-upload-btn');
     if(uploadBtn) uploadBtn.style.display = 'inline-block';
@@ -550,18 +545,18 @@ async function updateRow(btn, key, type) {
         const imageUrl = fileInput ? (fileInput.getAttribute('data-uploaded-url') || '') : '';
         data = { 
             imageUrl: imageUrl,
-            name: cells[1].innerText, 
-            code: cells[2].innerText, 
-            cat: cells[3].innerText, 
-            price: cells[4].innerText, 
-            cost: cells[5].innerText, 
-            qty: cells[6].innerText 
+            name: cells[1].innerText.trim(), 
+            code: cells[2].innerText.trim(), 
+            cat: cells[3].innerText.trim(), 
+            price: cells[4].innerText.trim(), 
+            cost: cells[5].innerText.trim(), 
+            qty: cells[6].innerText.trim() 
         };
     } else {
         data = { id: cells[0].innerText, customer: cells[2].innerText, total: cells[3].innerText.replace(/[^0-9.]/g,'') };
     }
     try {
-        await fetch(YOUR_GOOGLE_SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'update' + (type==='products'?'Product':'Invoice'), key, data }) });
+        const response = await fetch(YOUR_GOOGLE_SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'update' + (type==='products'?'Product':'Invoice'), key, data }) });
         alert("✅ Updated successfully!");
         row.querySelectorAll('td').forEach(td => td.contentEditable = false);
         const uploadBtn = row.querySelector('.sync-upload-btn');
@@ -770,7 +765,6 @@ function renderProductList(filtered = products) {
     });
 }
 
-// Setup or update generation view upon manual edits
 document.getElementById('pcode').addEventListener('input', function(e) {
     const val = e.target.value.trim();
     if(val) {
@@ -822,7 +816,6 @@ function editProduct(code) {
     preview.innerHTML = p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:220px;max-height:180px;border-radius:8px;border:2px solid #1976d2;">` : '';
     editMode = code;
 
-    // Load QR inside add/update area
     const qrDiv = document.getElementById('prodLabelQR');
     qrDiv.innerHTML = '';
     new QRCode(qrDiv, { text: p.code, width: 140, height: 140 });
@@ -970,10 +963,8 @@ async function generateBill() {
     document.getElementById('bill').innerHTML = billHTML;
     document.getElementById('pdfContainer').innerHTML = billHTML;
 
-    // Generate QR codes
     setTimeout(() => generatePaymentQRs(adjustedTotal), 300);
 
-    // Save to Firebase
     lastInvoiceCart = [...cart];
     cart.forEach(item => {
         db.ref('products/' + item.code).update({ qty: firebase.database.ServerValue.increment(-item.qty) });
@@ -998,7 +989,6 @@ async function generateBill() {
 function generatePaymentQRs(amount) {
     const payAmount = Math.round(amount || 1000);
 
-    // Nequi QR
     const nequiDiv = document.getElementById('nequiQR');
     if (nequiDiv) {
         nequiDiv.innerHTML = '';
@@ -1009,7 +999,6 @@ function generatePaymentQRs(amount) {
         });
     }
 
-    // PSE QR
     const pseDiv = document.getElementById('pseQR');
     if (pseDiv) {
         pseDiv.innerHTML = '';
@@ -1032,7 +1021,6 @@ function updateAdjustedAmount() {
     generatePaymentQRs(val);
 }
 
-// ================== PRINT & SHARE ==================
 function downloadPDF() {
     if (!document.getElementById('bill').innerHTML) return alert("Generate invoice first!");
     const win = window.open('', '_blank');
@@ -1053,7 +1041,6 @@ function printThermalBill() {
         return alert("Generate invoice first!");
     }
 
-    // Thermal-optimized HTML (narrow width, monospace font, good for 80mm / 58mm printers)
     const thermalHTML = `
         <!DOCTYPE html>
         <html>
@@ -1062,16 +1049,16 @@ function printThermalBill() {
             <meta charset="UTF-8">
             <style>
                 @page { 
-                    size: 80mm auto;   /* Change to 58mm if your printer is narrower */
+                    size: 80mm auto;
                     margin: 0; 
                 }
                 body {
                     margin: 0;
                     padding: 8mm 5mm;
                     font-family: 'Courier New', Courier, monospace;
-                    font-size: 12px;           /* Small font for thermal */
+                    font-size: 12px;
                     line-height: 1.3;
-                    width: 70mm;               /* Approx width for 80mm paper */
+                    width: 70mm;
                     max-width: 100%;
                 }
                 .receipt {
@@ -1120,6 +1107,7 @@ function printThermalBill() {
     win.document.write(thermalHTML);
     win.document.close();
 }
+
 function sendWhatsApp() {
     if (lastInvoiceCart.length === 0) return alert("Generate invoice first!");
     let message = `🛠️ *DINAMO TOOLS SALES & SERVICE*\n\n`;
@@ -1150,7 +1138,6 @@ function restoreStock() {
     alert("✅ Stock restored!");
 }
 
-// ================== LOAD DATA ==================
 function loadData() {
     db.ref('storeConfig').once('value', snap => {
         if (snap.val()) storeConfig = { ...storeConfig, ...snap.val() };
@@ -1167,7 +1154,6 @@ function loadData() {
     });
 }
 
-// Initialize
 window.onload = () => {
     auth.onAuthStateChanged(user => {
         if (user) {
